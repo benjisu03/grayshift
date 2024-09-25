@@ -125,8 +125,8 @@ impl Camera {
 
 			let material = hit_record.material.as_ref();
 			if let Some(scatter_record) = material.scatter(ray, &hit_record) {
-				let scattering_pdf = hit_record.material.scattering_pdf(ray, &hit_record, scatter_record.scattered_ray);
-				let pdf_weight = scattering_pdf;
+				//let scattering_pdf = hit_record.material.scattering_pdf(ray, &hit_record, scatter_record.scattered_ray);
+				///let pdf_weight = scattering_pdf;
 
 				let scatter_color = self.ray_color(
 					scatter_record.scattered_ray,
@@ -134,7 +134,8 @@ impl Camera {
 					world
 				);
 
-				let color_from_scatter = scatter_color * scatter_record.attenuation * scattering_pdf / pdf_weight;
+				//let color_from_scatter = scatter_color * scatter_record.attenuation * scattering_pdf / pdf_weight;
+				let color_from_scatter = scatter_color * scatter_record.attenuation;
 
 				return emission_color + color_from_scatter;
 			}
