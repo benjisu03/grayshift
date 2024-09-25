@@ -1,10 +1,10 @@
-use crate::interval::Interval;
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
 use std::rc::Rc;
 use crate::AABB::AABB;
-use crate::util::deg_to_rad;
+use crate::util::interval::Interval;
+use crate::util::util::deg_to_rad;
+use crate::util::vec3::Vec3;
 
 pub trait Hittable {
 	fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitRecord>;

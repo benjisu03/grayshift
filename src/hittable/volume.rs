@@ -1,11 +1,10 @@
 use std::rc::Rc;
 use crate::AABB::AABB;
-use crate::hittable::{HitRecord, Hittable};
-use crate::interval::Interval;
+use crate::hittable::hittable::{HitRecord, Hittable};
 use crate::material::{Isotropic, Material};
 use crate::ray::Ray;
-use crate::texture::Texture;
-use crate::vec3::Vec3;
+use crate::util::interval::Interval;
+use crate::util::vec3::Vec3;
 
 pub struct ConstantMedium {
 	boundary: Box<dyn Hittable>,

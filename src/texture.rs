@@ -1,10 +1,9 @@
+use fastrand::f64;
+use image::{DynamicImage, GenericImageView, ImageError};
+use noise::{NoiseFn, Perlin};
 use std::path::Path;
 use std::rc::Rc;
-use fastrand::f64;
-use image::{DynamicImage, GenericImageView, ImageError, ImageResult};
-use noise::{NoiseFn, OpenSimplex, Perlin};
-use crate::interval::Interval;
-use crate::vec3::Vec3;
+use crate::util::vec3::Vec3;
 
 pub trait Texture {
 	fn value_at(&self, u: f64, v: f64, p: Vec3) -> Vec3;

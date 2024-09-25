@@ -1,14 +1,13 @@
+use crate::color::write_color;
+use crate::ray::Ray;
+use indicatif::ProgressIterator;
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
-use indicatif::ProgressIterator;
-use log::{info, trace};
-use crate::color::write_color;
-use crate::hittable::Hittable;
-use crate::interval::Interval;
-use crate::ray::Ray;
-use crate::util::{deg_to_rad, random_vector_in_unit_disk, random_vector_on_hemisphere};
-use crate::vec3::Vec3;
+use crate::hittable::hittable::Hittable;
+use crate::util::interval::Interval;
+use crate::util::util::{deg_to_rad, random_vector_in_unit_disk};
+use crate::util::vec3::Vec3;
 
 pub struct Camera {
 	aspect_ratio: f64,
@@ -125,8 +124,6 @@ impl Camera {
 
 			let material = hit_record.material.as_ref();
 			if let Some(scatter_record) = material.scatter(ray, &hit_record) {
-				//let scattering_pdf = hit_record.material.scattering_pdf(ray, &hit_record, scatter_record.scattered_ray);
-				///let pdf_weight = scattering_pdf;
 
 				let scatter_color = self.ray_color(
 					scatter_record.scattered_ray,
@@ -134,7 +131,6 @@ impl Camera {
 					world
 				);
 
-				//let color_from_scatter = scatter_color * scatter_record.attenuation * scattering_pdf / pdf_weight;
 				let color_from_scatter = scatter_color * scatter_record.attenuation;
 
 				return emission_color + color_from_scatter;

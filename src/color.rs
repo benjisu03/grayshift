@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Write;
-use crate::interval::Interval;
-use crate::vec3::Vec3;
+use crate::util::interval::Interval;
+use crate::util::vec3::Vec3;
 
 const INTENSITY: Interval = Interval { min: 0.000, max: 0.999 };
 

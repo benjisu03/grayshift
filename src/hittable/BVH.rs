@@ -1,8 +1,8 @@
 use std::rc::Rc;
 use crate::AABB::AABB;
-use crate::hittable::{HitRecord, Hittable, HittableList};
-use crate::interval::Interval;
+use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
 use crate::ray::Ray;
+use crate::util::interval::Interval;
 
 pub struct BVHNode {
 	left: Box<dyn Hittable>,
