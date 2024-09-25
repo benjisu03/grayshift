@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
+use indicatif::ProgressIterator;
 use log::{info, trace};
 use crate::color::write_color;
 use crate::hittable::Hittable;
@@ -94,8 +95,7 @@ impl Camera {
 		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
 		writeln!(image_file, "255")?;
 
-		for j in 0..self.image_height {
-			trace!("Scanlines remaining: {}", self.image_height - j);
+		for j in (0..self.image_height).progress() {
 			for i in 0..self.image_width {
 
 				let mut pixel_color = Vec3::ZERO;
@@ -108,7 +108,6 @@ impl Camera {
 			}
 		}
 
-		info!("Done.");
 		Ok(())
 	}
 

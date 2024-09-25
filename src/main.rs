@@ -21,7 +21,7 @@ use crate::material::{Dielectric, DiffuseLight, Lambertian, Material, Metal};
 use crate::sphere::Sphere;
 use crate::util::{random_f64, random_vector};
 use crate::vec3::Vec3;
-use log::LevelFilter;
+use log::{info, LevelFilter};
 use std::fs::File;
 use std::io::Write;
 use std::rc::Rc;
@@ -734,5 +734,6 @@ fn final_scene(
 	let world_bvh = BVHNode::from_list(world);
 	camera.render(world_bvh, image_file)?;
 
+	info!("Done.");
 	Ok(())
 }
