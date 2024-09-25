@@ -2,11 +2,11 @@ use std::f64::consts::PI;
 use std::rc::Rc;
 use std::sync::Arc;
 use crate::AABB::AABB;
-use crate::hittable::{HitRecord, Hittable};
-use crate::interval::Interval;
+use crate::hittable::hittable::{HitRecord, Hittable};
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::util::interval::Interval;
+use crate::util::vec3::Vec3;
 
 pub struct Sphere {
 	center_start: Vec3,

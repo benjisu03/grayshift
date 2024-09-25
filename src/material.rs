@@ -1,11 +1,12 @@
 use std::f64::consts::PI;
+use std::rc::Rc;
 use std::sync::Arc;
-use crate::hittable::HitRecord;
+use crate::hittable::hittable::HitRecord;
 use crate::ONB::OrthonormalBasis;
 use crate::ray::Ray;
 use crate::texture::{SolidColorTexture, Texture};
-use crate::util::{random_cosine_direction, random_unit_vector, random_vector_on_hemisphere};
-use crate::vec3::Vec3;
+use crate::util::util::{random_cosine_direction, random_unit_vector};
+use crate::util::vec3::Vec3;
 
 pub trait Material: Send + Sync {
 	fn scatter(

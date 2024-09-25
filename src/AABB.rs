@@ -1,8 +1,7 @@
 use std::ops::{Add, Index};
-use crate::interval;
-use crate::interval::Interval;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::util::interval::Interval;
+use crate::util::vec3::Vec3;
 
 #[derive(Copy, Clone)]
 pub struct AABB {

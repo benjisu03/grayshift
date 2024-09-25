@@ -1,10 +1,10 @@
-use std::path::Path;
-use std::sync::Arc;
 use fastrand::f64;
-use image::{DynamicImage, GenericImageView, ImageError, ImageResult};
-use noise::{NoiseFn, OpenSimplex, Perlin};
-use crate::interval::Interval;
-use crate::vec3::Vec3;
+use image::{DynamicImage, GenericImageView, ImageError};
+use noise::{NoiseFn, Perlin};
+use std::path::Path;
+use std::rc::Rc;
+use std::sync::Arc;
+use crate::util::vec3::Vec3;
 
 pub trait Texture: Send + Sync {
 	fn value_at(&self, u: f64, v: f64, p: Vec3) -> Vec3;
