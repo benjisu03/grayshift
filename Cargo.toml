@@ -1,0 +1,12 @@
+[package]
+name = "grayshift"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colog = "1.3.0"
+fastrand = "2.1.1"
+image = "0.25.2"
+indicatif = "0.17.8"
+log = "0.4.22"
+noise = "0.9.0"
