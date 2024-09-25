@@ -1,12 +1,12 @@
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
 use fastrand::f64;
 use image::{DynamicImage, GenericImageView, ImageError, ImageResult};
 use noise::{NoiseFn, OpenSimplex, Perlin};
 use crate::interval::Interval;
 use crate::vec3::Vec3;
 
-pub trait Texture {
+pub trait Texture: Send + Sync {
 	fn value_at(&self, u: f64, v: f64, p: Vec3) -> Vec3;
 }
 
@@ -32,12 +32,12 @@ impl Texture for SolidColorTexture {
 
 pub struct CheckeredTexture {
 	scale_inv: f64,
-	even_texture: Rc<dyn Texture>,
-	odd_texture: Rc<dyn Texture>
+	even_texture: Arc<dyn Texture>,
+	odd_texture: Arc<dyn Texture>
 }
 
 impl CheckeredTexture {
-	pub fn new(scale: f64, even_texture: Rc<dyn Texture>, odd_texture: Rc<dyn Texture>) -> Self {
+	pub fn new(scale: f64, even_texture: Arc<dyn Texture>, odd_texture: Arc<dyn Texture>) -> Self {
 		CheckeredTexture {
 			scale_inv: 1.0 / scale,
 			even_texture,
@@ -48,8 +48,8 @@ impl CheckeredTexture {
 	pub fn from_colors(scale: f64, even_color: Vec3, odd_color: Vec3) -> Self {
 		CheckeredTexture {
 			scale_inv: 1.0 / scale,
-			even_texture: Rc::new(SolidColorTexture::new(even_color)),
-			odd_texture: Rc::new(SolidColorTexture::new(odd_color))
+			even_texture: Arc::new(SolidColorTexture::new(even_color)),
+			odd_texture: Arc::new(SolidColorTexture::new(odd_color))
 		}
 	}
 }

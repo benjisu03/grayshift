@@ -9,6 +9,8 @@ use crate::ray::Ray;
 use crate::util::{deg_to_rad, random_vector_in_unit_disk, random_vector_on_hemisphere};
 use crate::vec3::Vec3;
 
+use rayon::prelude::*;
+
 pub struct Camera {
 	aspect_ratio: f64,
 	image_width: i32,
@@ -106,6 +108,37 @@ impl Camera {
 
 				write_color(image_file, pixel_color * self.pixel_samples_scale);
 			}
+		}
+
+		info!("Done.");
+		Ok(())
+	}
+
+	pub fn render_parallel(&self, world: Box<dyn Hittable>, image_file: &mut File) -> std::io::Result<()> {
+		writeln!(image_file, "P3")?;
+		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
+		writeln!(image_file, "255")?;
+
+		let pixels:Vec<i32> = (0..(self.image_width * self.image_height)).collect();
+		let mut colors = Vec::with_capacity(pixels.capacity());
+
+		pixels.par_iter().map(|n| {
+			let i = n % self.image_width;
+			let j = n / self.image_width;
+
+			let mut pixel_color = Vec3::ZERO;
+			for _ in 0..self.samples_per_pixel {
+				let ray = self.get_ray(i, j);
+				pixel_color += self.ray_color(ray, self.max_depth, &world);
+			}
+
+			pixel_color /= self.samples_per_pixel as f64;
+
+			pixel_color
+		}).collect_into_vec(&mut colors);
+
+		for color in colors {
+			write_color(image_file, color);
 		}
 
 		info!("Done.");

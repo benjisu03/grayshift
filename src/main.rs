@@ -14,21 +14,21 @@ mod quad;
 mod volume;
 mod ONB;
 
-use std::error::Error;
 use crate::camera::Camera;
 use crate::hittable::{Hittable, HittableList, RotateY, Translate};
 use crate::material::{Dielectric, DiffuseLight, Lambertian, Material, Metal};
+use crate::quad::Quad;
 use crate::sphere::Sphere;
+use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture};
 use crate::util::{random_f64, random_vector};
 use crate::vec3::Vec3;
+use crate::volume::ConstantMedium;
+use crate::BVH::BVHNode;
 use log::LevelFilter;
+use std::error::Error;
 use std::fs::File;
 use std::io::Write;
-use std::rc::Rc;
-use crate::BVH::BVHNode;
-use crate::quad::Quad;
-use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture, SolidColorTexture};
-use crate::volume::ConstantMedium;
+use std::sync::Arc;
 
 fn main() -> Result<(), Box<dyn Error>> {
 
@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let mut image_file = File::create("image.ppm")?;
 
-	const SCENE: u8 = 8;
+	const SCENE: u8 = 0;
 
 	match SCENE {
 		9 => final_scene(&mut image_file, 800, 10000, 40),
@@ -61,12 +61,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let mut world = HittableList::new();
 
-	let ground_texture = Rc::new(CheckeredTexture::from_colors(
+	let ground_texture = Arc::new(CheckeredTexture::from_colors(
 		0.32,
 		Vec3::new(0.2, 0.3, 0.1),
 		Vec3::new(0.9, 0.9, 0.9)
 	));
-	let ground_material = Rc::new(Lambertian::from_texture(ground_texture));
+	let ground_material = Arc::new(Lambertian::from_texture(ground_texture));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, -1000.0, 0.0),
 		1000.0,
@@ -83,15 +83,15 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 			if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
 				let material_choice = fastrand::f64();
-				let material: Rc<dyn Material> = if material_choice < 0.8 {
+				let material: Arc<dyn Material> = if material_choice < 0.8 {
 					// diffuse
-					Rc::new(Lambertian::from_color(
+					Arc::new(Lambertian::from_color(
 						random_vector(0.0, 1.0) * random_vector(0.0, 1.0))
 					)
 
 				} else if material_choice < 0.95 {
 					// metal
-					Rc::new(Metal::new(
+					Arc::new(Metal::new(
 						random_vector(0.5, 1.0),
 						random_f64(0.0, 0.5)
 					))
@@ -99,7 +99,7 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 				} else {
 					// glass
 
-					Rc::new(Dielectric::new(1.5))
+					Arc::new(Dielectric::new(1.5))
 				};
 
 				let center_end = center + Vec3::new(0.0, fastrand::f64(), 0.0);
@@ -114,21 +114,21 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	let close_material = Rc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
+	let close_material = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(4.0, 1.0, 0.0),
 		1.0,
 		close_material
 	)));
 
-	let far_material = Rc::new(Dielectric::new(1.5));
+	let far_material = Arc::new(Dielectric::new(1.5));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, 1.0, 0.0),
 		1.0,
 		far_material
 	)));
 
-	let farther_material = Rc::new(Lambertian::from_color(Vec3::new(0.4, 0.2, 0.1)));
+	let farther_material = Arc::new(Lambertian::from_color(Vec3::new(0.4, 0.2, 0.1)));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(-4.0, 1.0, 0.0),
 		1.0,
@@ -159,12 +159,12 @@ fn checkered_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 
-	let checkered_texture = Rc::new(CheckeredTexture::from_colors(
+	let checkered_texture = Arc::new(CheckeredTexture::from_colors(
 		0.32,
 		Vec3::new(0.2, 0.3, 0.1),
 		Vec3::new(0.9, 0.9, 0.9)
 	));
-	let checkered_material = Rc::new(Lambertian::from_texture(checkered_texture));
+	let checkered_material = Arc::new(Lambertian::from_texture(checkered_texture));
 
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, -10.0, 0.0),
@@ -202,8 +202,8 @@ fn earth(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 
-	let earth_texture = Rc::new(ImageTexture::new("earthmap.jpg")?);
-	let earth_material = Rc::new(Lambertian::from_texture(earth_texture));
+	let earth_texture = Arc::new(ImageTexture::new("earthmap.jpg")?);
+	let earth_material = Arc::new(Lambertian::from_texture(earth_texture));
 
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, 0.0, 0.0),
@@ -235,8 +235,8 @@ fn perlin_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 
-	let perlin_texture = Rc::new(NoiseTexture::new(4.0));
-	let perlin_material = Rc::new(Lambertian::from_texture(perlin_texture));
+	let perlin_texture = Arc::new(NoiseTexture::new(4.0));
+	let perlin_material = Arc::new(Lambertian::from_texture(perlin_texture));
 
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, -1000.0, 0.0),
@@ -275,11 +275,11 @@ fn quads(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let mut world = HittableList::new();
 
 	// Materials
-	let left_red = Rc::new(Lambertian::from_color(Vec3::new(1.0, 0.2, 0.2)));
-	let back_green = Rc::new(Lambertian::from_color(Vec3::new(0.2, 1.0, 0.2)));
-	let right_blue = Rc::new(Lambertian::from_color(Vec3::new(0.2, 0.2, 1.0)));
-	let upper_orange = Rc::new(Lambertian::from_color(Vec3::new(1.0, 0.5, 0.0)));
-	let lower_teal = Rc::new(Lambertian::from_color(Vec3::new(0.2, 0.8, 0.8)));
+	let left_red = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.2, 0.2)));
+	let back_green = Arc::new(Lambertian::from_color(Vec3::new(0.2, 1.0, 0.2)));
+	let right_blue = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.2, 1.0)));
+	let upper_orange = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.5, 0.0)));
+	let lower_teal = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.8, 0.8)));
 
 	world.add(Box::new(Quad::new(
 		Vec3::new(-3.0, -2.0, 5.0),
@@ -336,8 +336,8 @@ fn simple_light(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 
-	let noise_texture = Rc::new(NoiseTexture::new(4.0));
-	let noise_material = Rc::new(Lambertian::from_texture(noise_texture));
+	let noise_texture = Arc::new(NoiseTexture::new(4.0));
+	let noise_material = Arc::new(Lambertian::from_texture(noise_texture));
 
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, -1000.0, 0.0),
@@ -351,7 +351,7 @@ fn simple_light(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		noise_material.clone()
 	)));
 
-	let light_material = Rc::new(DiffuseLight::from_color(
+	let light_material = Arc::new(DiffuseLight::from_color(
 		Vec3::new(4.0, 4.0, 4.0)
 	));
 
@@ -386,16 +386,16 @@ fn cornell_box(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 
-	let red_material = Rc::new(Lambertian::from_color(
+	let red_material = Arc::new(Lambertian::from_color(
 		Vec3::new(0.65, 0.05, 0.05)
 	));
-	let white_material = Rc::new(Lambertian::from_color(
+	let white_material = Arc::new(Lambertian::from_color(
 		Vec3::new(0.73, 0.73, 0.73)
 	));
-	let green_material = Rc::new(Lambertian::from_color(
+	let green_material = Arc::new(Lambertian::from_color(
 		Vec3::new(0.12, 0.45, 0.15)
 	));
-	let light_material = Rc::new(DiffuseLight::from_color(
+	let light_material = Arc::new(DiffuseLight::from_color(
 		Vec3::new(15.0, 15.0, 15.0)
 	));
 
@@ -479,16 +479,16 @@ fn cornell_smoke(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 
-	let red_material = Rc::new(Lambertian::from_color(
+	let red_material = Arc::new(Lambertian::from_color(
 		Vec3::new(0.65, 0.05, 0.05)
 	));
-	let white_material = Rc::new(Lambertian::from_color(
+	let white_material = Arc::new(Lambertian::from_color(
 		Vec3::new(0.73, 0.73, 0.73)
 	));
-	let green_material = Rc::new(Lambertian::from_color(
+	let green_material = Arc::new(Lambertian::from_color(
 		Vec3::new(0.12, 0.45, 0.15)
 	));
-	let light_material = Rc::new(DiffuseLight::from_color(
+	let light_material = Arc::new(DiffuseLight::from_color(
 		Vec3::new(7.0, 7.0, 7.0)
 	));
 
@@ -586,7 +586,7 @@ fn final_scene(
 	let mut world = HittableList::new();
 
 	// GROUND BOXES //
-	let ground_material = Rc::new(Lambertian::from_color(Vec3::new(0.48, 0.83, 0.53)));
+	let ground_material = Arc::new(Lambertian::from_color(Vec3::new(0.48, 0.83, 0.53)));
 	let boxes_per_side = 20;
 
 	let mut boxes = HittableList::new();
@@ -611,7 +611,7 @@ fn final_scene(
 	world.add(BVHNode::from_list(boxes));
 
 	// LIGHT //
-	let light_material = Rc::new(DiffuseLight::from_color(Vec3::new(7.0, 7.0, 7.0)));
+	let light_material = Arc::new(DiffuseLight::from_color(Vec3::new(7.0, 7.0, 7.0)));
 	world.add(Box::new(Quad::new(
 		Vec3::new(123.0, 554.0, 147.0),
 		Vec3::new(300.0, 0.0, 0.0),
@@ -623,7 +623,7 @@ fn final_scene(
 	// MOVING SPHERE //
 	let moving_center_1 = Vec3::new(400.0, 400.0, 200.0);
 	let moving_center_2 = moving_center_1 + Vec3::new(30.0, 0.0, 0.0);
-	let moving_material = Rc::new(Lambertian::from_color(Vec3::new(0.7, 0.3, 0.1)));
+	let moving_material = Arc::new(Lambertian::from_color(Vec3::new(0.7, 0.3, 0.1)));
 	world.add(Box::new(Sphere::new_moving(
 		moving_center_1,
 		moving_center_2,
@@ -632,7 +632,7 @@ fn final_scene(
 	)));
 
 	// GLASS SPHERE //
-	let glass_material = Rc::new(Dielectric::new(1.5));
+	let glass_material = Arc::new(Dielectric::new(1.5));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(260.0, 150.0, 45.0),
 		50.0,
@@ -640,7 +640,7 @@ fn final_scene(
 	)));
 
 	// METAL SPHERE //
-	let metal_material = Rc::new(Metal::new(Vec3::new(0.8, 0.8, 0.9), 1.0));
+	let metal_material = Arc::new(Metal::new(Vec3::new(0.8, 0.8, 0.9), 1.0));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, 150.0, 145.0),
 		50.0,
@@ -648,8 +648,8 @@ fn final_scene(
 	)));
 
 	// EARTH //
-	let earth_texture = Rc::new(ImageTexture::new("earthmap.jpg")?);
-	let earth_material = Rc::new(Lambertian::from_texture(earth_texture));
+	let earth_texture = Arc::new(ImageTexture::new("earthmap.jpg")?);
+	let earth_material = Arc::new(Lambertian::from_texture(earth_texture));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(400.0, 200.0, 400.0),
 		100.0,
@@ -657,8 +657,8 @@ fn final_scene(
 	)));
 
 	// NOISE SPHERE //
-	let noise_texture = Rc::new(NoiseTexture::new(0.2));
-	let noise_material = Rc::new(Lambertian::from_texture(noise_texture));
+	let noise_texture = Arc::new(NoiseTexture::new(0.2));
+	let noise_material = Arc::new(Lambertian::from_texture(noise_texture));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(220.0, 280.0, 300.0),
 		80.0,
@@ -666,13 +666,13 @@ fn final_scene(
 	)));
 
 	// FOGGY SPHERE //
-	let fog_material = Rc::new(Dielectric::new(1.5));
+	let fog_material = Arc::new(Dielectric::new(1.5));
 	let foggy_sphere_boundary = Box::new(Sphere::new_stationary(
 		Vec3::new(360.0, 150.0,145.0),
 		70.0,
 		fog_material.clone()
 	));
-	let foggy_sphere_material = Rc::new(Lambertian::from_color(Vec3::new(0.2, 0.4, 0.9)));
+	let foggy_sphere_material = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.4, 0.9)));
 	world.add(Box::new(ConstantMedium::new(
 		foggy_sphere_boundary,
 		0.2,
@@ -685,7 +685,7 @@ fn final_scene(
 		5000.0,
 		fog_material
 	));
-	let world_fog_material = Rc::new(Lambertian::from_color(Vec3::new(1.0, 1.0, 1.0)));
+	let world_fog_material = Arc::new(Lambertian::from_color(Vec3::new(1.0, 1.0, 1.0)));
 	world.add(Box::new(ConstantMedium::new(
 		world_fog_boundary,
 		0.0001,
@@ -693,7 +693,7 @@ fn final_scene(
 	)));
 
 	// BALLS //
-	let ball_material = Rc::new(Lambertian::from_color(Vec3::new(0.73, 0.73, 0.73)));
+	let ball_material = Arc::new(Lambertian::from_color(Vec3::new(0.73, 0.73, 0.73)));
 	let mut balls = HittableList::new();
 
 	let ns = 1000;

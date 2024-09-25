@@ -1,5 +1,5 @@
 use std::f64::consts::PI;
-use std::rc::Rc;
+use std::sync::Arc;
 use crate::hittable::HitRecord;
 use crate::ONB::OrthonormalBasis;
 use crate::ray::Ray;
@@ -7,7 +7,7 @@ use crate::texture::{SolidColorTexture, Texture};
 use crate::util::{random_cosine_direction, random_unit_vector, random_vector_on_hemisphere};
 use crate::vec3::Vec3;
 
-pub trait Material {
+pub trait Material: Send + Sync {
 	fn scatter(
 		&self,
 		ray_in: Ray,
@@ -26,16 +26,16 @@ pub struct ScatterRecord {
 }
 
 pub struct Lambertian {
-	texture: Rc<dyn Texture>
+	texture: Arc<dyn Texture>
 }
 
 
 impl Lambertian {
 	pub fn from_color(albedo: Vec3) -> Self {
-		Lambertian { texture: Rc::new(SolidColorTexture::new(albedo)) }
+		Lambertian { texture: Arc::new(SolidColorTexture::new(albedo)) }
 	}
 
-	pub fn from_texture(texture: Rc<dyn Texture>) -> Self {
+	pub fn from_texture(texture: Arc<dyn Texture>) -> Self {
 		Lambertian { texture: texture.clone() }
 	}
 }
@@ -148,16 +148,16 @@ impl Material for Dielectric {
 }
 
 pub struct DiffuseLight {
-	texture: Rc<dyn Texture>
+	texture: Arc<dyn Texture>
 }
 
 impl DiffuseLight {
-	pub fn new(texture: Rc<dyn Texture>) -> Self {
+	pub fn new(texture: Arc<dyn Texture>) -> Self {
 		DiffuseLight { texture }
 	}
 
 	pub fn from_color(color: Vec3) -> Self {
-		DiffuseLight { texture: Rc::new(SolidColorTexture::new(color) )}
+		DiffuseLight { texture: Arc::new(SolidColorTexture::new(color) )}
 	}
 }
 
@@ -168,16 +168,16 @@ impl Material for DiffuseLight {
 }
 
 pub struct Isotropic {
-	texture: Rc<dyn Texture>
+	texture: Arc<dyn Texture>
 }
 
 impl Isotropic {
-	pub fn new(texture: Rc<dyn Texture>) -> Self {
+	pub fn new(texture: Arc<dyn Texture>) -> Self {
 		Isotropic { texture }
 	}
 
 	pub fn from_color(color: Vec3) -> Self {
-		Isotropic { texture: Rc::new(SolidColorTexture::new(color) )}
+		Isotropic { texture: Arc::new(SolidColorTexture::new(color) )}
 	}
 }
 

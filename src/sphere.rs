@@ -13,12 +13,12 @@ pub struct Sphere {
 	center_path: Vec3,
 	is_moving: bool,
 	radius: f64,
-	material: Rc<dyn Material>,
+	material: Arc<dyn Material>,
 	bbox: AABB
 }
 
 impl Sphere {
-	pub fn new_stationary(center: Vec3, radius: f64, material: Rc<dyn Material>) -> Self {
+	pub fn new_stationary(center: Vec3, radius: f64, material: Arc<dyn Material>) -> Self {
 		let r_vec = Vec3::new(radius, radius, radius);
 		let bbox = AABB::from_corners(center - r_vec, center + r_vec);
 
@@ -32,7 +32,7 @@ impl Sphere {
 		}
 	}
 
-	pub fn new_moving(center1: Vec3, center2: Vec3, radius: f64, material: Rc<dyn  Material>) -> Self {
+	pub fn new_moving(center1: Vec3, center2: Vec3, radius: f64, material: Arc<dyn  Material>) -> Self {
 		let r_vec = Vec3::new(radius, radius, radius);
 		let bbox_start = AABB::from_corners(center1 - r_vec, center1 + r_vec);
 		let bbox_end = AABB::from_corners(center2 - r_vec, center2 + r_vec);
