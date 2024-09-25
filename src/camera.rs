@@ -10,36 +10,39 @@ use crate::util::util::{deg_to_rad, random_vector_in_unit_disk};
 use crate::util::vec3::Vec3;
 
 pub struct Camera {
-	aspect_ratio: f64,
 	image_width: i32,
 	image_height: i32,
+
 	samples_per_pixel: u32,
-	pixel_samples_scale: f64,
 	max_depth: u32,
-	background: Vec3,
-	defocus_angle: f64,
-	defocus_disk_u: Vec3,
-	defocus_disk_v: Vec3,
+
 	center: Vec3,
 	starting_pixel_pos: Vec3,
 	pixel_delta_u: Vec3,
-	pixel_delta_v: Vec3
+	pixel_delta_v: Vec3,
+
+	background: Vec3,
+
+	defocus_angle: f64,
+	defocus_disk_u: Vec3,
+	defocus_disk_v: Vec3,
 }
 
 impl Camera {
 
 	// PUBLIC //
-	pub fn new(aspect_ratio: f64,
-	           image_width: i32,
-	           samples_per_pixel: u32,
-	           max_depth: u32,
-	           v_fov: f64,
-	           look_from: Vec3,
-	           look_at: Vec3,
-	           vup: Vec3,
-	           defocus_angle: f64,
-	           focus_distance: f64,
-	           background: Vec3
+	pub fn new(
+		aspect_ratio: f64,
+		image_width: i32,
+		samples_per_pixel: u32,
+		max_depth: u32,
+		v_fov: f64,
+		look_from: Vec3,
+		look_at: Vec3,
+		vup: Vec3,
+		defocus_angle: f64,
+		focus_distance: f64,
+		background: Vec3
 	) -> Self {
 		let image_height = (image_width as f64 / aspect_ratio) as i32;
 
@@ -72,20 +75,22 @@ impl Camera {
 		let defocus_disk_v = v * defocus_radius;
 
 		Camera {
-			aspect_ratio,
 			image_width,
 			image_height,
+
 			samples_per_pixel,
-			pixel_samples_scale,
 			max_depth,
-			background,
-			defocus_angle,
-			defocus_disk_u,
-			defocus_disk_v,
+
 			center: look_from,
 			starting_pixel_pos,
 			pixel_delta_u,
-			pixel_delta_v
+			pixel_delta_v,
+
+			background,
+
+			defocus_angle,
+			defocus_disk_u,
+			defocus_disk_v
 		}
 	}
 
@@ -103,7 +108,9 @@ impl Camera {
 						pixel_color += self.ray_color(ray, self.max_depth, &world);
 					}
 
-				write_color(image_file, pixel_color * self.pixel_samples_scale);
+				pixel_color /= self.samples_per_pixel as f64;
+
+				write_color(image_file, pixel_color);
 			}
 		}
 
