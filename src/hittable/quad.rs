@@ -1,11 +1,11 @@
 use std::rc::Rc;
 use log::warn;
 use crate::AABB::AABB;
-use crate::hittable::{HitRecord, Hittable, HittableList};
-use crate::interval::Interval;
+use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::util::interval::Interval;
+use crate::util::vec3::Vec3;
 
 pub struct Quad {
 	q: Vec3,

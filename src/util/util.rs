@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 use fastrand::f64;
-use crate::vec3::Vec3;
+use crate::util::vec3::Vec3;
 
 pub fn random_f64(min: f64, max: f64) -> f64 {
 	fastrand::f64() * (max - min) + min
