@@ -1,9 +1,10 @@
 use crate::color::write_color;
 use crate::ray::Ray;
-use indicatif::ProgressIterator;
+use indicatif::{ProgressBar, ProgressIterator};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
+use std::sync::Arc;
 use log::info;
 use crate::hittable::hittable::Hittable;
 use crate::util::interval::Interval;
@@ -126,7 +127,9 @@ impl Camera {
 		writeln!(image_file, "255")?;
 
 		let pixels:Vec<i32> = (0..(self.image_width * self.image_height)).collect();
-		let mut colors = Vec::with_capacity(pixels.capacity());
+		let mut colors = Vec::with_capacity(pixels.len());
+
+		let progress = Arc::new(ProgressBar::new(pixels.len() as u64));
 
 		pixels.par_iter().map(|n| {
 			let i = n % self.image_width;
@@ -139,6 +142,8 @@ impl Camera {
 			}
 
 			pixel_color /= self.samples_per_pixel as f64;
+
+			progress.inc(1);
 
 			pixel_color
 		}).collect_into_vec(&mut colors);

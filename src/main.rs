@@ -133,7 +133,7 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let mut camera = Camera::new(
 		16.0 / 9.0,
 		400,
-		25,
+		1000,
 		50,
 		20.0,
 		Vec3::new(13.0, 2.0, 3.0),
@@ -145,7 +145,7 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	);
 
 	let world_bvh = BVHNode::from_list(world);
-	camera.render(world_bvh, image_file)?;
+	camera.render_parallel(world_bvh, image_file)?;
 
 	Ok(())
 }
