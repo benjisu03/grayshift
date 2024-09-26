@@ -62,3 +62,25 @@ pub fn random_cosine_direction() -> Vec3 {
 pub fn deg_to_rad(degrees: f64) -> f64 {
 	degrees / 180.0 * PI
 }
+
+
+pub fn rotate_vector(vector: Vec3, rotation: Vec3) -> Vec3 {
+	let (sin_x, cos_x) = rotation.x.sin_cos();
+	let (sin_y, cos_y) = rotation.y.sin_cos();
+	let (sin_z, cos_z) = rotation.z.sin_cos();
+
+	// Combined rotation matrix
+	let x = vector.x * (cos_y * cos_z) +
+		vector.y * (cos_x * sin_z + sin_x * sin_y * cos_z) +
+		vector.z * (sin_x * sin_z - cos_x * sin_y * cos_z);
+
+	let y = vector.x * (-cos_y * sin_z) +
+		vector.y * (cos_x * cos_z - sin_x * sin_y * sin_z) +
+		vector.z * (sin_x * cos_z + cos_x * sin_y * sin_z);
+
+	let z = vector.x * sin_y +
+		vector.y * (-sin_x * cos_y) +
+		vector.z * (cos_x * cos_y);
+
+	Vec3::new(x, y, z)
+}
