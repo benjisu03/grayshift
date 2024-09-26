@@ -135,7 +135,8 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		20.0,
@@ -182,7 +183,8 @@ fn checkered_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		20.0,
@@ -219,7 +221,8 @@ fn earth(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		20.0,
@@ -262,7 +265,8 @@ fn perlin_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		20.0,
@@ -328,7 +332,8 @@ fn quads(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		80.0,
@@ -382,7 +387,8 @@ fn simple_light(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		20.0,
@@ -479,7 +485,8 @@ fn cornell_box(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.5,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		40.0,
@@ -585,7 +592,8 @@ fn cornell_smoke(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		50,
 		40.0,
@@ -747,7 +755,8 @@ fn final_scene(
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.25,
-			batch_size: 32
+			batch_size: 32,
+			max_samples: 1000
 		},
 		max_depth,
 		40.0,

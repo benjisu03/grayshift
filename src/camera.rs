@@ -155,6 +155,12 @@ impl Camera {
 			if convergence_sq < (mean * mean * tolerance_sq) {
 				break;
 			}
+
+			// some pixels take too long to converge
+			// this means tolerance is not guaranteed, but adaptive sampling will at least speed up easy pixels
+			if sample_count as u32 > self.sample_settings.max_samples {
+				break;
+			}
 		}
 
 		pixel_color /= sample_count;
@@ -223,5 +229,6 @@ impl Camera {
 pub struct SampleSettings {
 	pub confidence: f64, // z-value
 	pub tolerance: f64,
-	pub batch_size: u32
+	pub batch_size: u32,
+	pub max_samples: u32
 }
