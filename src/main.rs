@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let mut image_file = File::create("image.ppm")?;
 
-	const SCENE: u8 = 5;
+	const SCENE: u8 = 4;
 
 	match SCENE {
 		9 => final_scene(&mut image_file, 800, 40),
