@@ -8,13 +8,10 @@ use crate::util::interval::Interval;
 use crate::util::vec3::Vec3;
 
 pub struct Triangle {
-    plane: Plane,
     normal: Vec3,
-
     a: Vec3,
     b: Vec3,
     c: Vec3,
-
     material: Arc<dyn Material>,
     bbox: AABB,
 }
@@ -22,52 +19,51 @@ pub struct Triangle {
 impl Triangle {
     pub fn new(a: Vec3, b: Vec3, c: Vec3, material: Arc<dyn Material>) -> Self {
         let normal = (b - a).cross(c - a);
-        let plane = Plane::new(normal.unit(), a);
-        let normal_sq = normal.length_squared();
 
         let bbox_diag1 = AABB::from_corners(a, b);
         let bbox_diag2 = AABB::from_corners(a, c);
         let bbox = AABB::from_AABB_pair(bbox_diag1, bbox_diag2);
 
-        Triangle {
-            plane,
-            normal,
-            a,
-            b,
-            c,
-            material,
-            bbox
-        }
+        Triangle { normal, a, b, c, material, bbox }
     }
+
+    const EPSILON: f64 = 1e-8;
 }
 
 impl Hittable for Triangle {
     fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitRecord> {
-        let (t, p) = self.plane.hit(ray, ray_t)?;
+        let edge_1 = self.c - self.a;
+        let edge_2 = self.b - self.a;
 
-        let normal_sq = self.normal.length_squared();
+        let p_vec = ray.direction.cross(edge_2);
+        let det = edge_1.dot(p_vec);
+        if det < Self::EPSILON { return None; }
 
-        let na = (self.c - self.b).cross(p - self.b);
-        let nb = (self.a - self.c).cross(p - self.c);
-        let nc = (self.b - self.a).cross(p - self.a);
+        let t_vec = ray.origin - self.a;
+        let mut u = t_vec.dot(p_vec);
+        if u < 0.0 || u > det { return None; }
 
-        let alpha = na.dot(self.normal) / normal_sq;
-        let beta =  nb.dot(self.normal) / normal_sq;
-        let gamma = nc.dot(self.normal) / normal_sq;
+        let q_vec = t_vec.cross(edge_1);
+        let mut v = ray.direction.dot(q_vec);
+        if v < 0.0 || u + v > det { return None; }
 
-        if alpha < 0.0 || beta < 0.0 || gamma < 0.0 {
-            // point lies on plane but outside of triangle
-            return None;
-        }
+        let mut t = edge_2.dot(q_vec);
+        let inv_det = 1.0 / det;
+
+        t *= inv_det;
+        u *= inv_det;
+        v *= inv_det;
+
+        let pos = ray.at(t);
 
         Some(HitRecord::new(
             ray,
             t,
-            p,
-            self.plane.normal,
+            pos,
+            self.normal,
             self.material.clone(),
-            0.0, // TODO: not sure what to put for these
-            0.0  //
+            u,
+            v
         ))
     }
 
