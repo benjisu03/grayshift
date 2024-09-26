@@ -3,20 +3,22 @@ use std::sync::Arc;
 use log::warn;
 use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
+use crate::hittable::plane::Plane;
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
 use crate::util::vec3::Vec3;
 
 pub struct Quad {
+	plane: Plane,
+
 	q: Vec3,
 	u: Vec3,
 	v: Vec3,
+	w: Vec3,
+
 	material: Arc<dyn Material>,
 	bbox: AABB,
-	normal: Vec3,
-	d: f64,
-	w: Vec3
 }
 
 impl Quad {
@@ -27,10 +29,12 @@ impl Quad {
 
 		let n = u.cross(v);
 		let normal = n.unit();
-		let d = normal.dot(q);
+
 		let w = n / n.dot(n);
 
-		Quad { q, u, v, material, bbox, normal, d, w }
+		let plane = Plane::new(normal, q);
+
+		Quad { plane, q, u, v, w, material, bbox }
 	}
 
 	pub fn is_in_mandelbrot(alpha: f64, beta: f64, max_iterations: usize) -> bool {
@@ -78,15 +82,8 @@ impl Quad {
 
 impl Hittable for Quad {
 	fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitRecord> {
-		let denominator = self.normal.dot(ray.direction);
+		let (t, intersection) = self.plane.hit(ray, ray_t)?;
 
-		// check if ray is parallel to the plane
-		if denominator.abs() < 1e-8 { return None; }
-
-		let t = (self.d - self.normal.dot(ray.origin)) / denominator;
-		if !ray_t.contains(t) { return None; }
-
-		let intersection = ray.at(t);
 		let planar_hit = intersection - self.q;
 		let alpha = self.w.dot(planar_hit.cross(self.v));
 		let beta = self.w.dot(self.u.cross(planar_hit));
@@ -104,7 +101,7 @@ impl Hittable for Quad {
 			ray,
 			t,
 			intersection,
-			self.normal,
+			self.plane.normal,
 			self.material.clone(),
 			alpha,
 			beta
