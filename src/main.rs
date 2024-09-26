@@ -9,7 +9,8 @@ mod texture;
 mod ONB;
 
 use std::error::Error;
-use crate::camera::{Camera, SampleSettings};
+use std::f64::consts::PI;
+use crate::camera::{Background, Camera, SampleSettings, HDRI};
 use crate::hittable::hittable::{Hittable, HittableList, RotateY, Translate};
 use crate::material::{Dielectric, DiffuseLight, Lambertian, Material, Metal};
 use crate::hittable::sphere::Sphere;
@@ -17,8 +18,9 @@ use crate::util::util::{random_f64, random_vector};
 use crate::util::vec3::Vec3;
 use log::{info, LevelFilter};
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufReader, Write};
 use std::sync::Arc;
+use image::error::UnsupportedErrorKind::Format;
 use crate::hittable::BVH::BVHNode;
 use crate::hittable::quad::Quad;
 use crate::hittable::triangle::Triangle;
@@ -34,10 +36,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let mut image_file = File::create("image.ppm")?;
 
+
+	const SCENE: u8 = 11;
+
+	match SCENE {
+		11 => hdri(&mut image_file),
+
 	const SCENE: u8 = 10;
 
 	match SCENE {
 		10 => triangles(&mut image_file),
+
 		9 => final_scene(&mut image_file, 800, 40),
 		8 => final_scene(&mut image_file, 400, 50),
 		7 => cornell_smoke(&mut image_file),
@@ -100,9 +109,9 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 				let center_end = center + Vec3::new(0.0, fastrand::f64(), 0.0);
 
-				world.add(Box::new(Sphere::new_moving(
+				world.add(Box::new(Sphere::new_stationary(
 					center,
-					center_end,
+					//center_end,
 					0.2,
 					material
 				)));
@@ -124,21 +133,24 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		far_material
 	)));
 
-	let farther_material = Arc::new(Lambertian::from_color(Vec3::new(0.4, 0.2, 0.1)));
+	let farther_material = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(-4.0, 1.0, 0.0),
 		1.0,
 		farther_material
 	)));
 
+	let HDRI_file = File::open("airport.hdr")?;
+	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
+
 	let mut camera = Camera::new(
 		16.0 / 9.0,
-		400,
+		600,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
-			tolerance: 0.25,
-			batch_size: 32,
-			max_samples: 1000
+			tolerance: 0.05,
+			batch_size: 64,
+			max_samples: 200
 		},
 		50,
 		20.0,
@@ -147,7 +159,10 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.6,
 		10.0,
-		Vec3::new(0.7, 0.8, 1.0)
+		Background::HDRI(HDRI {
+			image: HDRI_image,
+			rotation: Vec3::new(0.0, -90.0, 90.0)
+		})
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -195,7 +210,7 @@ fn checkered_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.7, 0.8, 1.0)
+		Background::SOLID(Vec3::new(0.7, 0.8, 1.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -233,7 +248,7 @@ fn earth(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.7, 0.8, 1.0)
+		Background::SOLID(Vec3::new(0.7, 0.8, 1.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -277,7 +292,7 @@ fn perlin_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.7, 0.8, 1.0)
+		Background::SOLID(Vec3::new(0.7, 0.8, 1.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -344,7 +359,7 @@ fn quads(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.7, 0.8, 1.0)
+		Background::SOLID(Vec3::new(0.7, 0.8, 1.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -399,7 +414,7 @@ fn simple_light(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.0, 0.0, 0.0)
+		Background::SOLID(Vec3::new(0.0, 0.0, 0.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -497,7 +512,7 @@ fn cornell_box(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.0, 0.0, 0.0)
+		Background::SOLID(Vec3::new(0.0, 0.0, 0.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -604,7 +619,7 @@ fn cornell_smoke(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.0, 0.0, 0.0)
+		Background::SOLID(Vec3::new(0.0, 0.0, 0.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
@@ -767,7 +782,7 @@ fn final_scene(
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.0, 0.0, 0.0)
+		Background::SOLID(Vec3::new(0.0, 0.0, 0.0))
 	);
 
 	// RENDER //
@@ -778,11 +793,52 @@ fn final_scene(
 	Ok(())
 }
 
-fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
+
+fn hdri(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 
 	// Materials
+
+	let material = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
+	world.add(Box::new(Sphere::new_stationary(
+		Vec3::new(4.0, 1.0, 0.0),
+		1.0,
+		material
+	)));
+
+	let HDRI_file = File::open("airport.hdr")?;
+	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
+
+	let mut camera = Camera::new(
+		16.0 / 9.0,
+		600,
+		SampleSettings {
+			confidence: 0.95, // 95% confidence => 1.96
+			tolerance: 0.05,
+			batch_size: 64,
+			max_samples: 200
+		},
+		50,
+		20.0,
+		Vec3::new(13.0, 2.0, 5.0),
+		Vec3::new(0.0, 0.0, 0.0),
+		Vec3::new(0.0, 1.0, 0.0),
+		0.6,
+		10.0,
+		Background::HDRI(HDRI {
+			image: HDRI_image,
+			rotation: Vec3::new(PI/2.0, PI, 0.0)
+  })
+    
+  let world_bvh = BVHNode::from_list(world);
+	camera.render(world_bvh, image_file)?;
+
+  Ok(())
+}
+
+fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
+    
 	let left_red = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.2, 0.2)));
 	let back_green = Arc::new(Lambertian::from_color(Vec3::new(0.2, 1.0, 0.2)));
 	let right_blue = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.2, 1.0)));

@@ -4,11 +4,12 @@ use indicatif::{ProgressBar, ProgressIterator};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 use std::sync::Arc;
 use log::info;
 use crate::hittable::hittable::Hittable;
 use crate::util::interval::Interval;
-use crate::util::util::{deg_to_rad, random_vector_in_unit_disk};
+use crate::util::util::{deg_to_rad, random_vector_in_unit_disk, rotate_vector};
 use crate::util::vec3::Vec3;
 
 use rayon::prelude::*;
@@ -25,7 +26,7 @@ pub struct Camera {
 	pixel_delta_u: Vec3,
 	pixel_delta_v: Vec3,
 
-	background: Vec3,
+	background: Background,
 
 	defocus_angle: f64,
 	defocus_disk_u: Vec3,
@@ -46,7 +47,7 @@ impl Camera {
 		vup: Vec3,
 		defocus_angle: f64,
 		focus_distance: f64,
-		background: Vec3
+		background: Background
 	) -> Self {
 		let image_height = (image_width as f64 / aspect_ratio) as i32;
 
@@ -197,7 +198,7 @@ impl Camera {
 			return emission_color;
 		}
 
-		self.background
+		self.sample_background(&ray)
 	}
 
 	fn get_ray(&self, i: i32, j: i32) -> Ray {
@@ -224,6 +225,15 @@ impl Camera {
 		self.center + v.x * self.defocus_disk_u + v.y * self.defocus_disk_v
 	}
 
+	fn sample_background(&self, ray: &Ray) -> Vec3 {
+		match &self.background {
+			Background::SOLID(color) => { *color }
+			Background::HDRI(HDRI) => { HDRI.sample(ray.direction) }
+		}
+	}
+
+
+
 }
 
 pub struct SampleSettings {
@@ -231,4 +241,31 @@ pub struct SampleSettings {
 	pub tolerance: f64,
 	pub batch_size: u32,
 	pub max_samples: u32
+}
+
+pub enum Background {
+	SOLID(Vec3),
+	HDRI(HDRI)
+}
+
+pub struct HDRI {
+	pub image: radiant::Image,
+	pub rotation: Vec3
+}
+
+impl HDRI {
+	pub fn sample(&self, direction: Vec3) -> Vec3 {
+		let rotated = rotate_vector(direction, self.rotation).unit();
+		let theta = rotated.y.atan2(rotated.x);
+		let phi = rotated.z.asin();
+
+		let u = 0.5 + theta / (2.0 * PI);
+		let v = 0.5 - phi / PI;
+
+		let x = ((u * (self.image.width as f64)) as usize) % self.image.width;
+		let y = ((v * (self.image.height as f64)) as usize) % self.image.height;
+
+		let color = self.image.pixel(x, y);
+		Vec3::new(color.r as f64, color.g as f64, color.b as f64)
+	}
 }
