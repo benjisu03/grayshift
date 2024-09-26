@@ -41,12 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	match SCENE {
 		11 => hdri(&mut image_file),
-
-	const SCENE: u8 = 10;
-
-	match SCENE {
 		10 => triangles(&mut image_file),
-
 		9 => final_scene(&mut image_file, 800, 40),
 		8 => final_scene(&mut image_file, 400, 50),
 		7 => cornell_smoke(&mut image_file),
@@ -828,8 +823,9 @@ fn hdri(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		10.0,
 		Background::HDRI(HDRI {
 			image: HDRI_image,
-			rotation: Vec3::new(PI/2.0, PI, 0.0)
-  })
+			rotation: Vec3::new(PI / 2.0, PI, 0.0)
+		})
+	);
     
   let world_bvh = BVHNode::from_list(world);
 	camera.render(world_bvh, image_file)?;
@@ -838,7 +834,9 @@ fn hdri(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 }
 
 fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
-    
+
+	let mut world = HittableList::new();
+
 	let left_red = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.2, 0.2)));
 	let back_green = Arc::new(Lambertian::from_color(Vec3::new(0.2, 1.0, 0.2)));
 	let right_blue = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.2, 1.0)));
@@ -880,7 +878,7 @@ fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		Vec3::new(0.0, 1.0, 0.0),
 		0.0,
 		10.0,
-		Vec3::new(0.7, 0.8, 1.0)
+		Background::SOLID(Vec3::new(0.7, 0.8, 1.0))
 	);
 
 	let world_bvh = BVHNode::from_list(world);
