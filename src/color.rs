@@ -24,3 +24,10 @@ fn linear_to_gamma(n: f64) -> f64 {
 
 	0.0
 }
+
+
+// Converts RGB into human-perceived luminance
+// Formula source: https://www.w3.org/TR/AERT/#color-contrast
+pub fn luminance(v: Vec3) -> f64 {
+	0.299 * v.x + 0.587 * v.y + 0.144 * v.z
+}

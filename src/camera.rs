@@ -1,4 +1,4 @@
-use crate::color::write_color;
+use crate::color::{luminance, write_color};
 use crate::ray::Ray;
 use indicatif::{ProgressBar, ProgressIterator};
 use std::f64::consts::PI;
@@ -17,7 +17,7 @@ pub struct Camera {
 	image_width: i32,
 	image_height: i32,
 
-	samples_per_pixel: u32,
+	sample_settings: SampleSettings,
 	max_depth: u32,
 
 	center: Vec3,
@@ -38,7 +38,7 @@ impl Camera {
 	pub fn new(
 		aspect_ratio: f64,
 		image_width: i32,
-		samples_per_pixel: u32,
+		sample_settings: SampleSettings,
 		max_depth: u32,
 		v_fov: f64,
 		look_from: Vec3,
@@ -72,8 +72,6 @@ impl Camera {
 		let starting_pixel_pos = viewport_upper_left
 			+ 0.5 * (pixel_delta_u + pixel_delta_v);
 
-		let pixel_samples_scale = 1.0 / samples_per_pixel as f64;
-
 		let defocus_radius = focus_distance * f64::tan(deg_to_rad(defocus_angle / 2.0));
 		let defocus_disk_u = u * defocus_radius;
 		let defocus_disk_v = v * defocus_radius;
@@ -82,7 +80,7 @@ impl Camera {
 			image_width,
 			image_height,
 
-			samples_per_pixel,
+			sample_settings,
 			max_depth,
 
 			center: look_from,
@@ -103,29 +101,6 @@ impl Camera {
 		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
 		writeln!(image_file, "255")?;
 
-		for j in (0..self.image_height).progress() {
-			for i in 0..self.image_width {
-
-				let mut pixel_color = Vec3::ZERO;
-					for sample in 0..self.samples_per_pixel {
-						let ray = self.get_ray(i, j);
-						pixel_color += self.ray_color(ray, self.max_depth, &world);
-					}
-
-				pixel_color /= self.samples_per_pixel as f64;
-
-				write_color(image_file, pixel_color);
-			}
-		}
-
-		Ok(())
-	}
-
-	pub fn render_parallel(&self, world: Box<dyn Hittable>, image_file: &mut File) -> std::io::Result<()> {
-		writeln!(image_file, "P3")?;
-		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
-		writeln!(image_file, "255")?;
-
 		let pixels:Vec<i32> = (0..(self.image_width * self.image_height)).collect();
 		let mut colors = Vec::with_capacity(pixels.len());
 
@@ -134,29 +109,60 @@ impl Camera {
 		pixels.par_iter().map(|n| {
 			let i = n % self.image_width;
 			let j = n / self.image_width;
-
-			let mut pixel_color = Vec3::ZERO;
-			for _ in 0..self.samples_per_pixel {
-				let ray = self.get_ray(i, j);
-				pixel_color += self.ray_color(ray, self.max_depth, &world);
-			}
-
-			pixel_color /= self.samples_per_pixel as f64;
-
-			progress.inc(1);
-
-			pixel_color
+			self.sample(i, j, &world, progress.clone())
 		}).collect_into_vec(&mut colors);
 
 		for color in colors {
 			write_color(image_file, color);
 		}
 
-		info!("Done.");
 		Ok(())
 	}
 
 	// PRIVATE //
+
+	fn sample(&self, i: i32, j: i32, world: &Box<dyn Hittable>, progress: Arc<ProgressBar>) -> Vec3 {
+		let mut pixel_color = Vec3::ZERO;
+
+		let tolerance_sq = self.sample_settings.tolerance * self.sample_settings.tolerance;
+		let confidence_sq = self.sample_settings.confidence * self.sample_settings.confidence;
+
+		let mut sum = 0.0;
+		let mut sq_sum = 0.0;
+		let mut sample_count = 0.0;
+
+		loop {
+			// do a batch of samples
+			sample_count += self.sample_settings.batch_size as f64;
+			for _ in 0..self.sample_settings.batch_size {
+				let ray = self.get_ray(i, j);
+				let sample_color = self.ray_color(ray, self.max_depth, &world);
+				pixel_color += sample_color;
+
+				// luminance allows 1D tolerance based on human perception
+				let lum = luminance(sample_color);
+				sum += lum;
+				sq_sum += lum * lum;
+			}
+
+			// calculate variance
+			let mean = sum / sample_count;
+			let variance_sq = 1.0 / (sample_count - 1.0) * (sq_sum - sum * sum / sample_count);
+
+			let convergence_sq = confidence_sq * variance_sq / sample_count;
+
+			// check if convergence is within tolerance, squared to reduce calculations
+			if convergence_sq < (mean * mean * tolerance_sq) {
+				break;
+			}
+		}
+
+		pixel_color /= sample_count;
+
+		progress.inc(1);
+		pixel_color
+	}
+
 
 	fn ray_color(&self, ray: Ray, depth: u32, world: &Box<dyn Hittable>) -> Vec3 {
 		if depth <= 0 { return Vec3::ZERO }
@@ -212,4 +218,10 @@ impl Camera {
 		self.center + v.x * self.defocus_disk_u + v.y * self.defocus_disk_v
 	}
 
+}
+
+pub struct SampleSettings {
+	pub confidence: f64, // z-value
+	pub tolerance: f64,
+	pub batch_size: u32
 }
