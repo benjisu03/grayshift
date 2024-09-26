@@ -9,7 +9,7 @@ use crate::util::vec3::Vec3;
 
 pub struct Triangle {
     plane: Plane,
-    normal_sq: f64,
+    normal: Vec3,
 
     a: Vec3,
     b: Vec3,
@@ -31,7 +31,7 @@ impl Triangle {
 
         Triangle {
             plane,
-            normal_sq,
+            normal,
             a,
             b,
             c,
@@ -45,9 +45,15 @@ impl Hittable for Triangle {
     fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitRecord> {
         let (t, p) = self.plane.hit(ray, ray_t)?;
 
-        let alpha = (self.c - self.b).dot(p - self.b) / self.normal_sq;
-        let beta =  (self.a - self.c).dot(p - self.c) / self.normal_sq;
-        let gamma = (self.b - self.a).dot(p - self.a) / self.normal_sq;
+        let normal_sq = self.normal.length_squared();
+
+        let na = (self.c - self.b).cross(p - self.b);
+        let nb = (self.a - self.c).cross(p - self.c);
+        let nc = (self.b - self.a).cross(p - self.a);
+
+        let alpha = na.dot(self.normal) / normal_sq;
+        let beta =  nb.dot(self.normal) / normal_sq;
+        let gamma = nc.dot(self.normal) / normal_sq;
 
         if alpha < 0.0 || beta < 0.0 || gamma < 0.0 {
             // point lies on plane but outside of triangle

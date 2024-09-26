@@ -790,42 +790,35 @@ fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let lower_teal = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.8, 0.8)));
 
 	world.add(Box::new(Triangle::new(
-		Vec3::new(0.0, 0.0, 0.0),
-		Vec3::new(-1.0, 1.0, 0.0),
-		Vec3::new(1.0, 1.0, 0.0),
+		Vec3::new(-3.0, -2.0, 5.0),
+		Vec3::new(0.0, 0.0, -4.0),
+		Vec3::new(0.0, 4.0, 0.0),
+		left_red
+	)));
+	world.add(Box::new(Triangle::new(
+		Vec3::new(-2.0, -2.0, 0.0),
+		Vec3::new(4.0, 0.0, 0.0),
+		Vec3::new(0.0, 4.0, 0.0),
 		back_green.clone()
 	)));
-
-	// world.add(Box::new(Quad::new(
-	// 	Vec3::new(-3.0, -2.0, 5.0),
-	// 	Vec3::new(0.0, 0.0, -4.0),
-	// 	Vec3::new(0.0, 4.0, 0.0),
-	// 	left_red
-	// )));
-	// world.add(Box::new(Quad::new(
-	// 	Vec3::new(-2.0, -2.0, 0.0),
-	// 	Vec3::new(4.0, 0.0, 0.0),
-	// 	Vec3::new(0.0, 4.0, 0.0),
-	// 	back_green.clone()
-	// )));
-	// world.add(Box::new(Quad::new(
-	// 	Vec3::new(3.0, -2.0, 1.0),
-	// 	Vec3::new(0.0, 0.0, 4.0),
-	// 	Vec3::new(0.0, 4.0, 0.0),
-	// 	right_blue
-	// )));
-	// world.add(Box::new(Quad::new(
-	// 	Vec3::new(-2.0, 3.0, 1.0),
-	// 	Vec3::new(4.0, 0.0, 0.0),
-	// 	Vec3::new(0.0, 0.0, 4.0),
-	// 	upper_orange
-	// )));
-	// world.add(Box::new(Quad::new(
-	// 	Vec3::new(-2.0, -3.0, 5.0),
-	// 	Vec3::new(4.0, 0.0, 0.0),
-	// 	Vec3::new(0.0, 0.0, -4.0),
-	// 	lower_teal
-	// )));
+	world.add(Box::new(Triangle::new(
+		Vec3::new(3.0, -2.0, 1.0),
+		Vec3::new(0.0, 0.0, 4.0),
+		Vec3::new(0.0, 4.0, 0.0),
+		right_blue
+	)));
+	world.add(Box::new(Triangle::new(
+		Vec3::new(-2.0, 3.0, 1.0),
+		Vec3::new(4.0, 0.0, 0.0),
+		Vec3::new(0.0, 0.0, 4.0),
+		upper_orange
+	)));
+	world.add(Box::new(Triangle::new(
+		Vec3::new(-2.0, -3.0, 5.0),
+		Vec3::new(4.0, 0.0, 0.0),
+		Vec3::new(0.0, 0.0, -4.0),
+		lower_teal
+	)));
 
 	let camera = Camera::new(
 		1.0,
