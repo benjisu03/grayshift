@@ -21,6 +21,7 @@ use std::io::Write;
 use std::sync::Arc;
 use crate::hittable::BVH::BVHNode;
 use crate::hittable::quad::Quad;
+use crate::hittable::triangle::Triangle;
 use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture, SolidColorTexture};
 use crate::hittable::volume::ConstantMedium;
 
@@ -33,9 +34,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let mut image_file = File::create("image.ppm")?;
 
-	const SCENE: u8 = 4;
+	const SCENE: u8 = 10;
 
 	match SCENE {
+		10 => triangles(&mut image_file),
 		9 => final_scene(&mut image_file, 800, 40),
 		8 => final_scene(&mut image_file, 400, 50),
 		7 => cornell_smoke(&mut image_file),
@@ -773,5 +775,79 @@ fn final_scene(
 	camera.render(world_bvh, image_file)?;
 
 	info!("Done.");
+	Ok(())
+}
+
+fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
+
+	let mut world = HittableList::new();
+
+	// Materials
+	let left_red = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.2, 0.2)));
+	let back_green = Arc::new(Lambertian::from_color(Vec3::new(0.2, 1.0, 0.2)));
+	let right_blue = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.2, 1.0)));
+	let upper_orange = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.5, 0.0)));
+	let lower_teal = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.8, 0.8)));
+
+	world.add(Box::new(Triangle::new(
+		Vec3::new(0.0, 0.0, 0.0),
+		Vec3::new(-1.0, 1.0, 0.0),
+		Vec3::new(1.0, 1.0, 0.0),
+		back_green.clone()
+	)));
+
+	// world.add(Box::new(Quad::new(
+	// 	Vec3::new(-3.0, -2.0, 5.0),
+	// 	Vec3::new(0.0, 0.0, -4.0),
+	// 	Vec3::new(0.0, 4.0, 0.0),
+	// 	left_red
+	// )));
+	// world.add(Box::new(Quad::new(
+	// 	Vec3::new(-2.0, -2.0, 0.0),
+	// 	Vec3::new(4.0, 0.0, 0.0),
+	// 	Vec3::new(0.0, 4.0, 0.0),
+	// 	back_green.clone()
+	// )));
+	// world.add(Box::new(Quad::new(
+	// 	Vec3::new(3.0, -2.0, 1.0),
+	// 	Vec3::new(0.0, 0.0, 4.0),
+	// 	Vec3::new(0.0, 4.0, 0.0),
+	// 	right_blue
+	// )));
+	// world.add(Box::new(Quad::new(
+	// 	Vec3::new(-2.0, 3.0, 1.0),
+	// 	Vec3::new(4.0, 0.0, 0.0),
+	// 	Vec3::new(0.0, 0.0, 4.0),
+	// 	upper_orange
+	// )));
+	// world.add(Box::new(Quad::new(
+	// 	Vec3::new(-2.0, -3.0, 5.0),
+	// 	Vec3::new(4.0, 0.0, 0.0),
+	// 	Vec3::new(0.0, 0.0, -4.0),
+	// 	lower_teal
+	// )));
+
+	let camera = Camera::new(
+		1.0,
+		400,
+		SampleSettings {
+			confidence: 0.95, // 95% confidence => 1.96
+			tolerance: 0.25,
+			batch_size: 32,
+			max_samples: 1000
+		},
+		50,
+		80.0,
+		Vec3::new(0.0,0.0, 9.0),
+		Vec3::new(0.0, 0.0, 0.0),
+		Vec3::new(0.0, 1.0, 0.0),
+		0.0,
+		10.0,
+		Vec3::new(0.7, 0.8, 1.0)
+	);
+
+	let world_bvh = BVHNode::from_list(world);
+	camera.render(world_bvh, image_file)?;
+
 	Ok(())
 }
