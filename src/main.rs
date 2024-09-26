@@ -19,6 +19,7 @@ use log::{info, LevelFilter};
 use std::fs::File;
 use std::io::Write;
 use std::rc::Rc;
+use std::sync::Arc;
 use crate::hittable::BVH::BVHNode;
 use crate::hittable::quad::Quad;
 use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture, SolidColorTexture};
@@ -33,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let mut image_file = File::create("image.ppm")?;
 
-	const SCENE: u8 = 8;
+	const SCENE: u8 = 0;
 
 	match SCENE {
 		// 9 => final_scene(&mut image_file, 800, 10000, 40),
@@ -55,12 +56,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let mut world = HittableList::new();
 
-	let ground_texture = Rc::new(CheckeredTexture::from_colors(
+	let ground_texture = Arc::new(CheckeredTexture::from_colors(
 		0.32,
 		Vec3::new(0.2, 0.3, 0.1),
 		Vec3::new(0.9, 0.9, 0.9)
 	));
-	let ground_material = Rc::new(Lambertian::from_texture(ground_texture));
+	let ground_material = Arc::new(Lambertian::from_texture(ground_texture));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, -1000.0, 0.0),
 		1000.0,
@@ -77,15 +78,15 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 			if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
 				let material_choice = fastrand::f64();
-				let material: Rc<dyn Material> = if material_choice < 0.8 {
+				let material: Arc<dyn Material> = if material_choice < 0.8 {
 					// diffuse
-					Rc::new(Lambertian::from_color(
+					Arc::new(Lambertian::from_color(
 						random_vector(0.0, 1.0) * random_vector(0.0, 1.0))
 					)
 
 				} else if material_choice < 0.95 {
 					// metal
-					Rc::new(Metal::new(
+					Arc::new(Metal::new(
 						random_vector(0.5, 1.0),
 						random_f64(0.0, 0.5)
 					))
@@ -93,7 +94,7 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 				} else {
 					// glass
 
-					Rc::new(Dielectric::new(1.5))
+					Arc::new(Dielectric::new(1.5))
 				};
 
 				let center_end = center + Vec3::new(0.0, fastrand::f64(), 0.0);
@@ -108,21 +109,21 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		}
 	}
 
-	let close_material = Rc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
+	let close_material = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(4.0, 1.0, 0.0),
 		1.0,
 		close_material
 	)));
 
-	let far_material = Rc::new(Dielectric::new(1.5));
+	let far_material = Arc::new(Dielectric::new(1.5));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(0.0, 1.0, 0.0),
 		1.0,
 		far_material
 	)));
 
-	let farther_material = Rc::new(Lambertian::from_color(Vec3::new(0.4, 0.2, 0.1)));
+	let farther_material = Arc::new(Lambertian::from_color(Vec3::new(0.4, 0.2, 0.1)));
 	world.add(Box::new(Sphere::new_stationary(
 		Vec3::new(-4.0, 1.0, 0.0),
 		1.0,
@@ -132,7 +133,7 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let mut camera = Camera::new(
 		16.0 / 9.0,
 		400,
-		25,
+		1000,
 		50,
 		20.0,
 		Vec3::new(13.0, 2.0, 3.0),
@@ -144,7 +145,7 @@ fn bouncing_spheres(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	);
 
 	let world_bvh = BVHNode::from_list(world);
-	camera.render(world_bvh, image_file)?;
+	camera.render_parallel(world_bvh, image_file)?;
 
 	Ok(())
 }

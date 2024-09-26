@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::Arc;
 use log::warn;
 use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
@@ -11,7 +12,7 @@ pub struct Quad {
 	q: Vec3,
 	u: Vec3,
 	v: Vec3,
-	material: Rc<dyn Material>,
+	material: Arc<dyn Material>,
 	bbox: AABB,
 	normal: Vec3,
 	d: f64,
@@ -19,7 +20,7 @@ pub struct Quad {
 }
 
 impl Quad {
-	pub fn new(q: Vec3, u: Vec3, v: Vec3, material: Rc<dyn Material>) -> Self {
+	pub fn new(q: Vec3, u: Vec3, v: Vec3, material: Arc<dyn Material>) -> Self {
 		let bbox_diag1 = AABB::from_corners(q, q + u + v);
 		let bbox_diag2 = AABB::from_corners(q + u, q + v);
 		let bbox = AABB::from_AABB_pair(bbox_diag1, bbox_diag2);
@@ -46,7 +47,7 @@ impl Quad {
 		true
 	}
 
-	pub fn cube(point_a: Vec3, point_b: Vec3, material: Rc<dyn Material>) -> HittableList {
+	pub fn cube(point_a: Vec3, point_b: Vec3, material: Arc<dyn Material>) -> HittableList {
 		let mut sides = HittableList::new();
 
 		let min = Vec3::new(

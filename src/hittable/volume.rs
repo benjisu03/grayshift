@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::Arc;
 use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable};
 use crate::material::{Isotropic, Material};
@@ -9,11 +10,11 @@ use crate::util::vec3::Vec3;
 pub struct ConstantMedium {
 	boundary: Box<dyn Hittable>,
 	density_neg_inv: f64,
-	phase_function: Rc<dyn Material>
+	phase_function: Arc<dyn Material>
 }
 
 impl ConstantMedium {
-	pub fn new(boundary: Box<dyn Hittable>, density: f64, phase_function: Rc<dyn Material>) -> Self {
+	pub fn new(boundary: Box<dyn Hittable>, density: f64, phase_function: Arc<dyn Material>) -> Self {
 		let density_neg_inv = -1.0 / density;
 
 		ConstantMedium { boundary, density_neg_inv, phase_function }
@@ -21,7 +22,7 @@ impl ConstantMedium {
 
 	pub fn from_isotropic_color(boundary: Box<dyn Hittable>, density: f64, color: Vec3) -> Self {
 		let density_neg_inv = - 1.0 / density;
-		let phase_function = Rc::new(Isotropic::from_color(color));
+		let phase_function = Arc::new(Isotropic::from_color(color));
 
 		ConstantMedium { boundary, density_neg_inv, phase_function}
 	}

@@ -1,12 +1,13 @@
 use crate::material::Material;
 use crate::ray::Ray;
 use std::rc::Rc;
+use std::sync::Arc;
 use crate::AABB::AABB;
 use crate::util::interval::Interval;
 use crate::util::util::deg_to_rad;
 use crate::util::vec3::Vec3;
 
-pub trait Hittable {
+pub trait Hittable: Send + Sync {
 	fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitRecord>;
 	fn bounding_box(&self) -> AABB;
 }
@@ -16,7 +17,7 @@ pub struct HitRecord {
 	pub position: Vec3,
 	pub normal: Vec3,
 	pub is_front_face: bool,
-	pub material: Rc<dyn Material>,
+	pub material: Arc<dyn Material>,
 	pub u: f64,
 	pub v: f64
 }
@@ -27,7 +28,7 @@ impl HitRecord {
 		t: f64,
 		position: Vec3,
 		normal: Vec3,
-		material: Rc<dyn Material>,
+		material: Arc<dyn Material>,
 		u: f64,
 		v: f64
 	) -> Self {

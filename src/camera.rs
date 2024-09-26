@@ -1,13 +1,17 @@
 use crate::color::write_color;
 use crate::ray::Ray;
-use indicatif::ProgressIterator;
+use indicatif::{ProgressBar, ProgressIterator};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
+use std::sync::Arc;
+use log::info;
 use crate::hittable::hittable::Hittable;
 use crate::util::interval::Interval;
 use crate::util::util::{deg_to_rad, random_vector_in_unit_disk};
 use crate::util::vec3::Vec3;
+
+use rayon::prelude::*;
 
 pub struct Camera {
 	image_width: i32,
@@ -114,6 +118,41 @@ impl Camera {
 			}
 		}
 
+		Ok(())
+	}
+
+	pub fn render_parallel(&self, world: Box<dyn Hittable>, image_file: &mut File) -> std::io::Result<()> {
+		writeln!(image_file, "P3")?;
+		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
+		writeln!(image_file, "255")?;
+
+		let pixels:Vec<i32> = (0..(self.image_width * self.image_height)).collect();
+		let mut colors = Vec::with_capacity(pixels.len());
+
+		let progress = Arc::new(ProgressBar::new(pixels.len() as u64));
+
+		pixels.par_iter().map(|n| {
+			let i = n % self.image_width;
+			let j = n / self.image_width;
+
+			let mut pixel_color = Vec3::ZERO;
+			for _ in 0..self.samples_per_pixel {
+				let ray = self.get_ray(i, j);
+				pixel_color += self.ray_color(ray, self.max_depth, &world);
+			}
+
+			pixel_color /= self.samples_per_pixel as f64;
+
+			progress.inc(1);
+
+			pixel_color
+		}).collect_into_vec(&mut colors);
+
+		for color in colors {
+			write_color(image_file, color);
+		}
+
+		info!("Done.");
 		Ok(())
 	}
 
