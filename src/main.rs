@@ -21,6 +21,7 @@ use std::fs::File;
 use std::io::{BufReader, Write};
 use std::sync::Arc;
 use image::error::UnsupportedErrorKind::Format;
+use crate::util::mesh::Mesh;
 use crate::hittable::BVH::BVHNode;
 use crate::hittable::quad::Quad;
 use crate::hittable::triangle::Triangle;
@@ -37,11 +38,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut image_file = File::create("image.ppm")?;
 
 
-	const SCENE: u8 = 11;
+	const SCENE: u8 = 12;
 
 	match SCENE {
+		12 => meshes(&mut image_file),
 		11 => hdri(&mut image_file),
-		10 => triangles(&mut image_file),
+		// 10 => triangles(&mut image_file),
 		9 => final_scene(&mut image_file, 800, 40),
 		8 => final_scene(&mut image_file, 400, 50),
 		7 => cornell_smoke(&mut image_file),
@@ -789,6 +791,60 @@ fn final_scene(
 }
 
 
+// fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
+//
+// 	let mut world = HittableList::new();
+//
+// 	let left_red = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.2, 0.2)));
+// 	let back_green = Arc::new(Lambertian::from_color(Vec3::new(0.2, 1.0, 0.2)));
+// 	let right_blue = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.2, 1.0)));
+// 	let upper_orange = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.5, 0.0)));
+// 	let lower_teal = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.8, 0.8)));
+//
+// 	world.add(Box::new(Triangle::new(
+// 		Vec3::new(-2.0,  2.0, 0.0),
+// 		Vec3::new(-2.0, -2.0, 0.0),
+// 		Vec3::new(-2.0, -2.0, 4.0),
+// 		left_red
+// 	)));
+// 	world.add(Box::new(Triangle::new(
+// 		Vec3::new(-2.0, 2.0, 0.0),
+// 		Vec3::new(2.0, -2.0, 0.0),
+// 		Vec3::new(-2.0,-2.0, 0.0),
+// 		back_green
+// 	)));
+// 	world.add(Box::new(Triangle::new(
+// 		Vec3::new(-2.0, -2.0, 4.0),
+// 		Vec3::new(-2.0, -2.0, 0.0),
+// 		Vec3::new(2.0, -2.0, 0.0),
+// 		upper_orange
+// 	)));
+//
+// 	let camera = Camera::new(
+// 		1.0,
+// 		400,
+// 		SampleSettings {
+// 			confidence: 0.95, // 95% confidence => 1.96
+// 			tolerance: 0.25,
+// 			batch_size: 32,
+// 			max_samples: 1000
+// 		},
+// 		50,
+// 		80.0,
+// 		Vec3::new(0.0,0.0, 9.0),
+// 		Vec3::new(0.0, 0.0, 0.0),
+// 		Vec3::new(0.0, 1.0, 0.0),
+// 		0.0,
+// 		10.0,
+// 		Background::SOLID(Vec3::new(0.7, 0.8, 1.0))
+// 	);
+//
+// 	let world_bvh = BVHNode::from_list(world);
+// 	camera.render(world_bvh, image_file)?;
+//
+// 	Ok(())
+// }
+
 fn hdri(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
@@ -826,63 +882,114 @@ fn hdri(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 			rotation: Vec3::new(PI / 2.0, PI, 0.0)
 		})
 	);
-    
+
   let world_bvh = BVHNode::from_list(world);
 	camera.render(world_bvh, image_file)?;
 
   Ok(())
 }
 
-fn triangles(image_file: &mut File) -> Result<(), Box<dyn Error>> {
+fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
+	let metal = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
 
-	let left_red = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.2, 0.2)));
-	let back_green = Arc::new(Lambertian::from_color(Vec3::new(0.2, 1.0, 0.2)));
-	let right_blue = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.2, 1.0)));
-	let upper_orange = Arc::new(Lambertian::from_color(Vec3::new(1.0, 0.5, 0.0)));
-	let lower_teal = Arc::new(Lambertian::from_color(Vec3::new(0.2, 0.8, 0.8)));
+	let load_options = tobj::LoadOptions {
+		single_index: false,
+		triangulate: false,
+		ignore_points: false,
+		ignore_lines: false,
+	};
+	let (models, _) = tobj::load_obj("cube.obj", &load_options)?;
 
-	world.add(Box::new(Triangle::new(
-		Vec3::new(-2.0,  2.0, 0.0),
-		Vec3::new(-2.0, -2.0, 0.0),
-		Vec3::new(-2.0, -2.0, 4.0),
-		left_red
-	)));
-	world.add(Box::new(Triangle::new(
-		Vec3::new(-2.0, 2.0, 0.0),
-		Vec3::new(2.0, -2.0, 0.0),
-		Vec3::new(-2.0,-2.0, 0.0),
-		back_green
-	)));
-	world.add(Box::new(Triangle::new(
-		Vec3::new(-2.0, -2.0, 4.0),
-		Vec3::new(-2.0, -2.0, 0.0),
-		Vec3::new(2.0, -2.0, 0.0),
-		upper_orange
-	)));
+	for model in models {
+		let mesh = Mesh::new(model.mesh, metal.clone());
+		//mesh.triangles.into_iter().for_each(|triangle| { world.add(Box::new(triangle))});
+	}
 
-	let camera = Camera::new(
-		1.0,
-		400,
+	let v1 = Vec3::new(-1.0, -1.0, -1.0);
+	let v2 = Vec3::new( 1.0, -1.0, -1.0);
+	let v3 = Vec3::new( 1.0,  1.0, -1.0);
+	let v4 = Vec3::new(-1.0,  1.0, -1.0);
+	let v5 = Vec3::new(-1.0,  -1.0,  1.0);
+	let v6 = Vec3::new( 1.0,  -1.0,  1.0);
+	let v7 = Vec3::new( 1.0,  1.0,  1.0);
+	let v8 = Vec3::new(-1.0,  1.0,  1.0);
+
+	let vn1 = Vec3::new( 0.0, 0.0, -1.0);
+	let vn2 = Vec3::new( 0.0, 0.0,  1.0);
+	let vn3 = Vec3::new( 0.0, 1.0,  0.0);
+	let vn4 = Vec3::new( 0.0,-1.0,  0.0);
+	let vn5 = Vec3::new( 1.0, 0.0,  0.0);
+	let vn6 = Vec3::new(-1.0, 0.0,  0.0);
+
+	let f1  = Triangle::new(v1, v2, v3, vn1, metal.clone());
+	let f2  = Triangle::new(v1, v3, v4, vn1, metal.clone());
+	let f3  = Triangle::new(v5, v7, v6, vn2, metal.clone());
+	let f4  = Triangle::new(v5, v8, v7, vn2, metal.clone());
+	let f5  = Triangle::new(v4, v3, v7, vn3, metal.clone());
+	let f6  = Triangle::new(v4, v7, v8, vn3, metal.clone());
+	let f7  = Triangle::new(v1, v5, v8, vn4, metal.clone());
+	let f8  = Triangle::new(v1, v8, v4, vn4, metal.clone());
+	let f9  = Triangle::new(v2, v6, v7, vn5, metal.clone());
+	let f10 = Triangle::new(v2, v7, v3, vn5, metal.clone());
+	let f11 = Triangle::new(v1, v4, v8, vn6, metal.clone());
+	let f12 = Triangle::new(v1, v8, v5, vn6, metal.clone());
+
+	world.add(Box::new(f1));
+	world.add(Box::new(f2));
+	world.add(Box::new(f3));
+	world.add(Box::new(f4));
+	world.add(Box::new(f5));
+	world.add(Box::new(f6));
+	world.add(Box::new(f7));
+	world.add(Box::new(f8));
+	world.add(Box::new(f9));
+	world.add(Box::new(f10));
+	world.add(Box::new(f11));
+	world.add(Box::new(f12));
+
+	// world.add(Box::new(Sphere::new_stationary(
+	// 	Vec3::new(4.0, 1.0, 0.0),
+	// 	1.0,
+	// 	metal
+	// )));
+
+	// let glass = Arc::new(Dielectric::new(1.52 / 1.003));
+	// world.add(Box::new(Sphere::new_stationary(
+	// 	Vec3::new(4.0, 1.0, 3.0),
+	// 	1.0,
+	// 	glass
+	// )));
+
+	let HDRI_file = File::open("airport.hdr")?;
+	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
+
+	let mut camera = Camera::new(
+		16.0 / 9.0,
+		1200,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
-			tolerance: 0.25,
+			tolerance: 0.001,
 			batch_size: 32,
-			max_samples: 1000
+			max_samples: 100000
 		},
-		50,
-		80.0,
-		Vec3::new(0.0,0.0, 9.0),
+		100,
+		20.0,
+		Vec3::new(10.0, 10.0, -10.0),
 		Vec3::new(0.0, 0.0, 0.0),
 		Vec3::new(0.0, 1.0, 0.0),
-		0.0,
+		0.6,
 		10.0,
-		Background::SOLID(Vec3::new(0.7, 0.8, 1.0))
+		Background::HDRI(HDRI {
+			image: HDRI_image,
+			rotation: Vec3::new(PI / 2.0, PI, 0.0)
+		})
 	);
 
-	let world_bvh = BVHNode::from_list(world);
-	camera.render(world_bvh, image_file)?;
+	//let world_bvh = BVHNode::from_list(world);
+	let world_hittable: Box<dyn Hittable> = Box::new(world);
+	camera.render(world_hittable, image_file)?;
 
 	Ok(())
 }

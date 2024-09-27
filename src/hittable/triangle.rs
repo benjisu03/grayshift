@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use log::error;
 use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable};
 use crate::hittable::plane::Plane;
@@ -17,8 +18,7 @@ pub struct Triangle {
 }
 
 impl Triangle {
-    pub fn new(a: Vec3, b: Vec3, c: Vec3, material: Arc<dyn Material>) -> Self {
-        let normal = (b - a).cross(c - a);
+    pub fn new(a: Vec3, b: Vec3, c: Vec3, normal: Vec3, material: Arc<dyn Material>) -> Self {
 
         let bbox_diag1 = AABB::from_corners(a, b);
         let bbox_diag2 = AABB::from_corners(a, c);
@@ -37,22 +37,20 @@ impl Hittable for Triangle {
 
         let p_vec = ray.direction.cross(edge_2);
         let det = edge_1.dot(p_vec);
-        if det < Self::EPSILON { return None; }
+        if -Self::EPSILON < det && det < Self::EPSILON  { return None; }
 
-        let t_vec = ray.origin - self.a;
-        let mut u = t_vec.dot(p_vec);
-        if u < 0.0 || u > det { return None; }
-
-        let q_vec = t_vec.cross(edge_1);
-        let mut v = ray.direction.dot(q_vec);
-        if v < 0.0 || u + v > det { return None; }
-
-        let mut t = edge_2.dot(q_vec);
         let inv_det = 1.0 / det;
 
-        t *= inv_det;
-        u *= inv_det;
-        v *= inv_det;
+        let t_vec = ray.origin - self.a;
+        let u = t_vec.dot(p_vec) * inv_det;
+        if u < 0.0 || u > 1.0 { return None; }
+
+        let q_vec = t_vec.cross(edge_1);
+        let v = ray.direction.dot(q_vec) * inv_det;
+        if v < 0.0 || u + v > 1.0 { return None; }
+
+        let t = edge_2.dot(q_vec) * inv_det;
+        if t < ray_t.min || t > ray_t.max { return None; }
 
         let pos = ray.at(t);
 
