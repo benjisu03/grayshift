@@ -900,62 +900,27 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		ignore_points: false,
 		ignore_lines: false,
 	};
-	let (models, _) = tobj::load_obj("cube.obj", &load_options)?;
+	let (models, _) = tobj::load_obj("bmw/bmw.obj", &load_options)?;
 
 	for model in models {
 		let mesh = Mesh::new(model.mesh, metal.clone());
-		//mesh.triangles.into_iter().for_each(|triangle| { world.add(Box::new(triangle))});
+		mesh.triangles.into_iter().for_each(|triangle| { world.add(Box::new(triangle))});
 	}
 
-	let v1 = Vec3::new(-1.0, -1.0, -1.0);
-	let v2 = Vec3::new( 1.0, -1.0, -1.0);
-	let v3 = Vec3::new( 1.0,  1.0, -1.0);
-	let v4 = Vec3::new(-1.0,  1.0, -1.0);
-	let v5 = Vec3::new(-1.0,  -1.0,  1.0);
-	let v6 = Vec3::new( 1.0,  -1.0,  1.0);
-	let v7 = Vec3::new( 1.0,  1.0,  1.0);
-	let v8 = Vec3::new(-1.0,  1.0,  1.0);
 
-	let vn1 = Vec3::new( 0.0, 0.0, -1.0);
-	let vn2 = Vec3::new( 0.0, 0.0,  1.0);
-	let vn3 = Vec3::new( 0.0, 1.0,  0.0);
-	let vn4 = Vec3::new( 0.0,-1.0,  0.0);
-	let vn5 = Vec3::new( 1.0, 0.0,  0.0);
-	let vn6 = Vec3::new(-1.0, 0.0,  0.0);
-
-	let f1  = Triangle::new(v1, v2, v3, vn1, metal.clone());
-	let f2  = Triangle::new(v1, v3, v4, vn1, metal.clone());
-	let f3  = Triangle::new(v5, v7, v6, vn2, metal.clone());
-	let f4  = Triangle::new(v5, v8, v7, vn2, metal.clone());
-	let f5  = Triangle::new(v4, v3, v7, vn3, metal.clone());
-	let f6  = Triangle::new(v4, v7, v8, vn3, metal.clone());
-	let f7  = Triangle::new(v1, v5, v8, vn4, metal.clone());
-	let f8  = Triangle::new(v1, v8, v4, vn4, metal.clone());
-	let f9  = Triangle::new(v2, v6, v7, vn5, metal.clone());
-	let f10 = Triangle::new(v2, v7, v3, vn5, metal.clone());
-	let f11 = Triangle::new(v1, v4, v8, vn6, metal.clone());
-	let f12 = Triangle::new(v1, v8, v5, vn6, metal.clone());
-
-	world.add(Box::new(f1));
-	world.add(Box::new(f2));
-	world.add(Box::new(f3));
-	world.add(Box::new(f4));
-	world.add(Box::new(f5));
-	world.add(Box::new(f6));
-	world.add(Box::new(f7));
-	world.add(Box::new(f8));
-	world.add(Box::new(f9));
-	world.add(Box::new(f10));
-	world.add(Box::new(f11));
-	world.add(Box::new(f12));
+	// world.add(Box::new(Quad::new(
+	// 	Vec3::new(0.0, -1.0, -1.0),
+	// 	Vec3::new(0.0, 2.0, 0.0),
+	// 	Vec3::new(0.0, 0.0, 2.0),
+	// 	metal.clone()
+	// )));
 
 	// world.add(Box::new(Sphere::new_stationary(
-	// 	Vec3::new(4.0, 1.0, 0.0),
+	// 	Vec3::new(0.0, 0.0, 4.0),
 	// 	1.0,
 	// 	metal
 	// )));
 
-	// let glass = Arc::new(Dielectric::new(1.52 / 1.003));
 	// world.add(Box::new(Sphere::new_stationary(
 	// 	Vec3::new(4.0, 1.0, 3.0),
 	// 	1.0,
@@ -967,17 +932,17 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let mut camera = Camera::new(
 		16.0 / 9.0,
-		1200,
+		600,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.001,
 			batch_size: 32,
-			max_samples: 100000
+			max_samples: 1000000
 		},
-		100,
+		2,
 		20.0,
-		Vec3::new(10.0, 10.0, -10.0),
-		Vec3::new(0.0, 0.0, 0.0),
+		Vec3::new(-600.0, 300.0, 800.0),
+		Vec3::new(0.0, 100.0, 0.0),
 		Vec3::new(0.0, 1.0, 0.0),
 		0.6,
 		10.0,
@@ -987,9 +952,8 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		})
 	);
 
-	//let world_bvh = BVHNode::from_list(world);
-	let world_hittable: Box<dyn Hittable> = Box::new(world);
-	camera.render(world_hittable, image_file)?;
+	let world_bvh = BVHNode::from_list(world);
+	camera.render(world_bvh, image_file)?;
 
 	Ok(())
 }

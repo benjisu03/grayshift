@@ -35,7 +35,7 @@ impl Mesh {
             let b = &chunk[1];
             let c = &chunk[2];
 
-            let normal = a.normal;
+            let normal = a.normal.unit();
 
             let color = Arc::new(Lambertian::from_color(random_vector(0.0, 1.0)));
 
