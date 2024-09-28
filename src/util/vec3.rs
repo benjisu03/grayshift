@@ -180,5 +180,11 @@ impl From<&[f32]> for Vec3 {
 	}
 }
 
+impl From<[f32; 3]> for Vec3 {
+	fn from(v: [f32; 3]) -> Self {
+		Vec3::new(v[0] as f64, v[1] as f64, v[2] as f64)
+	}
+}
+
 
 

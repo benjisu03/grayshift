@@ -37,9 +37,7 @@ impl Mesh {
 
             let normal = a.normal.unit();
 
-            let color = Arc::new(Lambertian::from_color(random_vector(0.0, 1.0)));
-
-            Triangle::new(a.position, b.position, c.position, normal, color)
+            Triangle::new(a.position, b.position, c.position, normal, material.clone())
         }).collect();
 
         Self { triangles }

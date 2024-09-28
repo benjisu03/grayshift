@@ -900,32 +900,19 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		ignore_points: false,
 		ignore_lines: false,
 	};
-	let (models, _) = tobj::load_obj("bmw/bmw.obj", &load_options)?;
+	let (models, materials) = tobj::load_obj("bmw/bmw.obj", &load_options)?;
+	let materials = materials?;
+
+	let lambertians: Vec<Arc<Lambertian>> = materials.iter().map(|material| {
+		Arc::new(Lambertian::from_color(Vec3::from(material.diffuse.unwrap())))
+	}).collect();
 
 	for model in models {
-		let mesh = Mesh::new(model.mesh, metal.clone());
+		let material = &lambertians[model.mesh.material_id.unwrap()];
+
+		let mesh = Mesh::new(model.mesh, material.clone());
 		mesh.triangles.into_iter().for_each(|triangle| { world.add(Box::new(triangle))});
 	}
-
-
-	// world.add(Box::new(Quad::new(
-	// 	Vec3::new(0.0, -1.0, -1.0),
-	// 	Vec3::new(0.0, 2.0, 0.0),
-	// 	Vec3::new(0.0, 0.0, 2.0),
-	// 	metal.clone()
-	// )));
-
-	// world.add(Box::new(Sphere::new_stationary(
-	// 	Vec3::new(0.0, 0.0, 4.0),
-	// 	1.0,
-	// 	metal
-	// )));
-
-	// world.add(Box::new(Sphere::new_stationary(
-	// 	Vec3::new(4.0, 1.0, 3.0),
-	// 	1.0,
-	// 	glass
-	// )));
 
 	let HDRI_file = File::open("airport.hdr")?;
 	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
@@ -935,9 +922,9 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		600,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
-			tolerance: 0.001,
+			tolerance: 0.05,
 			batch_size: 32,
-			max_samples: 1000000
+			max_samples: 100
 		},
 		2,
 		20.0,
