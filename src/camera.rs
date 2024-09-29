@@ -15,10 +15,13 @@ use crate::util::vec3::Vec3;
 use rayon::prelude::*;
 
 pub struct Camera {
-	image_width: i32,
-	image_height: i32,
+	image_width: u32,
+	image_height: u32,
 
 	sample_settings: SampleSettings,
+	batch_sqrt: u32,
+	batch_sqrt_recip: f64,
+
 	max_depth: u32,
 
 	center: Vec3,
@@ -38,7 +41,7 @@ impl Camera {
 	// PUBLIC //
 	pub fn new(
 		aspect_ratio: f64,
-		image_width: i32,
+		image_width: u32,
 		sample_settings: SampleSettings,
 		max_depth: u32,
 		v_fov: f64,
@@ -49,7 +52,7 @@ impl Camera {
 		focus_distance: f64,
 		background: Background
 	) -> Self {
-		let image_height = (image_width as f64 / aspect_ratio) as i32;
+		let image_height = (image_width as f64 / aspect_ratio) as u32;
 
 		let theta = v_fov / 180.0 * PI;
 		let h = f64::tan(theta / 2.0);
@@ -77,11 +80,17 @@ impl Camera {
 		let defocus_disk_u = u * defocus_radius;
 		let defocus_disk_v = v * defocus_radius;
 
+		let batch_sqrt = (sample_settings.batch_size as f64).sqrt() as u32;
+		let batch_sqrt_recip = 1.0 / (batch_sqrt as f64);
+
 		Camera {
 			image_width,
 			image_height,
 
 			sample_settings,
+			batch_sqrt,
+			batch_sqrt_recip,
+
 			max_depth,
 
 			center: look_from,
@@ -102,7 +111,7 @@ impl Camera {
 		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
 		writeln!(image_file, "255")?;
 
-		let pixels:Vec<i32> = (0..(self.image_width * self.image_height)).collect();
+		let pixels:Vec<u32> = (0..(self.image_width * self.image_height)).collect();
 		let mut colors = Vec::with_capacity(pixels.len());
 
 		let progress = Arc::new(ProgressBar::new(pixels.len() as u64));
@@ -122,7 +131,7 @@ impl Camera {
 
 	// PRIVATE //
 
-	fn sample(&self, i: i32, j: i32, world: &Box<dyn Hittable>, progress: Arc<ProgressBar>) -> Vec3 {
+	fn sample(&self, i: u32, j: u32, world: &Box<dyn Hittable>, progress: Arc<ProgressBar>) -> Vec3 {
 		let mut pixel_color = Vec3::ZERO;
 
 		let tolerance_sq = self.sample_settings.tolerance * self.sample_settings.tolerance;
@@ -135,15 +144,18 @@ impl Camera {
 		loop {
 			// do a batch of samples
 			sample_count += self.sample_settings.batch_size as f64;
-			for _ in 0..self.sample_settings.batch_size {
-				let ray = self.get_ray(i, j);
-				let sample_color = self.ray_color(ray, self.max_depth, &world);
-				pixel_color += sample_color;
 
-				// luminance allows 1D tolerance based on human perception
-				let lum = luminance(sample_color);
-				sum += lum;
-				sq_sum += lum * lum;
+			for s_i in 0..self.batch_sqrt {
+				for s_j in 0..self.batch_sqrt {
+					let ray = self.get_ray(i, j, s_i, s_j);
+					let sample_color = self.ray_color(ray, self.max_depth, &world);
+					pixel_color += sample_color;
+
+					// luminance allows 1D tolerance based on human perception
+					let lum = luminance(sample_color);
+					sum += lum;
+					sq_sum += lum * lum;
+				}
 			}
 
 			// calculate variance
@@ -170,6 +182,37 @@ impl Camera {
 		pixel_color
 	}
 
+
+	fn get_ray(&self, i: u32, j: u32, s_i: u32, s_j: u32) -> Ray {
+		let offset = self.stratified_square_sample(s_i, s_j);
+		let pixel_sample = self.starting_pixel_pos
+							   + (i as f64 + offset.x) * self.pixel_delta_u
+							   + (j as f64 + offset.y) * self.pixel_delta_v;
+
+		let ray_origin = if self.defocus_angle <= 0.0 {
+			self.center
+		} else {
+			self.defocus_disk_sample()
+		};
+
+		let ray_direction = pixel_sample - ray_origin;
+		let ray_time = fastrand::f64();
+
+		Ray::new(ray_origin, ray_direction, ray_time)
+	}
+
+	fn stratified_square_sample(&self, s_i: u32, s_j: u32) -> Vec3 {
+		Vec3::new(
+			((s_i as f64) + fastrand::f64()) * self.batch_sqrt_recip - 0.5,
+			((s_j as f64) + fastrand::f64()) * self.batch_sqrt_recip - 0.5,
+			0.0
+		)
+	}
+
+	fn defocus_disk_sample(&self) -> Vec3 {
+		let v = random_vector_in_unit_disk();
+		self.center + v.x * self.defocus_disk_u + v.y * self.defocus_disk_v
+	}
 
 	fn ray_color(&self, ray: Ray, depth: u32, world: &Box<dyn Hittable>) -> Vec3 {
 		if depth <= 0 { return Vec3::ZERO }
@@ -199,30 +242,6 @@ impl Camera {
 		}
 
 		self.sample_background(&ray)
-	}
-
-	fn get_ray(&self, i: i32, j: i32) -> Ray {
-		let offset_x = fastrand::f64() - 0.5;
-		let offset_y = fastrand::f64() - 0.5;
-		let pixel_sample = self.starting_pixel_pos
-							   + (i as f64 + offset_x) * self.pixel_delta_u
-							   + (j as f64 + offset_y) * self.pixel_delta_v;
-
-		let ray_origin = if self.defocus_angle <= 0.0 {
-			self.center
-		} else {
-			self.defocus_disk_sample()
-		};
-
-		let ray_direction = pixel_sample - ray_origin;
-		let ray_time = fastrand::f64();
-
-		Ray::new(ray_origin, ray_direction, ray_time)
-	}
-
-	fn defocus_disk_sample(&self) -> Vec3 {
-		let v = random_vector_in_unit_disk();
-		self.center + v.x * self.defocus_disk_u + v.y * self.defocus_disk_v
 	}
 
 	fn sample_background(&self, ray: &Ray) -> Vec3 {

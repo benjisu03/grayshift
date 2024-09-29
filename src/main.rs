@@ -627,7 +627,7 @@ fn cornell_smoke(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 fn final_scene(
 	image_file: &mut File,
-	image_width: i32,
+	image_width: u32,
 	max_depth: u32
 ) -> Result<(), Box<dyn Error>> {
 	let mut world = HittableList::new();
@@ -917,22 +917,26 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let HDRI_file = File::open("airport.hdr")?;
 	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
 
+	let camera_center = Vec3::new(-600.0, 300.0, 800.0);
+	let camera_look_at = Vec3::new(0.0, 100.0, 0.0);
+	let focus_distance = (camera_look_at - camera_center).length();
+
 	let mut camera = Camera::new(
 		16.0 / 9.0,
 		600,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
-			tolerance: 0.05,
+			tolerance: 0.01,
 			batch_size: 32,
-			max_samples: 100
+			max_samples: 1000
 		},
 		2,
 		20.0,
-		Vec3::new(-600.0, 300.0, 800.0),
-		Vec3::new(0.0, 100.0, 0.0),
+		camera_center,
+		camera_look_at,
 		Vec3::new(0.0, 1.0, 0.0),
 		0.6,
-		10.0,
+		focus_distance,
 		Background::HDRI(HDRI {
 			image: HDRI_image,
 			rotation: Vec3::new(PI / 2.0, PI, 0.0)
