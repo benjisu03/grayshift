@@ -7,6 +7,7 @@ mod material;
 mod AABB;
 mod texture;
 mod ONB;
+mod pdf;
 
 use std::error::Error;
 use std::f64::consts::PI;
@@ -27,6 +28,7 @@ use crate::hittable::quad::Quad;
 use crate::hittable::triangle::Triangle;
 use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture, SolidColorTexture};
 use crate::hittable::volume::ConstantMedium;
+
 
 fn main() -> Result<(), Box<dyn Error>> {
 
