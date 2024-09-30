@@ -9,6 +9,7 @@ mod texture;
 mod ONB;
 mod bsdf;
 mod bsdf;
+mod pdf;
 
 use std::error::Error;
 use std::f64::consts::PI;
