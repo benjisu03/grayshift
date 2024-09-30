@@ -52,8 +52,8 @@ pub fn random_cosine_direction() -> Vec3 {
 	let phi = 2.0 * PI * r_1;
 	let r_2_sqrt = f64::sqrt(r_2);
 
-	let x = f64::cos(phi) * f64::sqrt(r_2_sqrt);
-	let y = f64::sin(phi) * f64::sqrt(r_2_sqrt);
+	let x = f64::cos(phi) * r_2_sqrt;
+	let y = f64::sin(phi) * r_2_sqrt;
 	let z = f64::sqrt(1.0 - r_2);
 
 	Vec3 { x, y, z }

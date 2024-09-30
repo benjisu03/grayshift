@@ -5,7 +5,7 @@ use crate::hittable::hittable::HitRecord;
 use crate::ONB::OrthonormalBasis;
 use crate::ray::Ray;
 use crate::texture::{SolidColorTexture, Texture};
-use crate::util::util::{random_cosine_direction, random_unit_vector};
+use crate::util::util::{random_cosine_direction, random_unit_vector, random_vector_on_hemisphere};
 use crate::util::vec3::Vec3;
 
 pub trait Material: Send + Sync {
@@ -17,7 +17,7 @@ pub trait Material: Send + Sync {
 
 	fn emitted(&self, u: f64, v: f64, p: Vec3) -> Vec3 { Vec3::ZERO }
 	
-	fn scattering_pdf(&self, ray_in: Ray, hit_record: &HitRecord, scattered: Ray) -> f64 { 0.0 }
+	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f64 { 0.0 }
 }
 
 pub struct ScatterRecord {
@@ -58,7 +58,7 @@ impl Material for Lambertian {
 			ray_in.time
 		);
 
-		let pdf = basis.w.dot(scatter_direction) / PI;
+		let pdf = (basis.w.dot(scatter_direction) / PI).max(0.0);
 
 		Some(ScatterRecord {
 			attenuation,
@@ -67,8 +67,9 @@ impl Material for Lambertian {
 		})
 	}
 
-	fn scattering_pdf(&self, ray_in: Ray, hit_record: &HitRecord, scattered: Ray) -> f64 {
-		1.0 / (2.0 * PI)
+	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f64 {
+		let cos_theta = hit_record.normal.dot(scattered.direction.unit());
+		if cos_theta < 0.0 { 0.0 } else { cos_theta / PI }
 	}
 }
 
@@ -195,7 +196,7 @@ impl Material for Isotropic {
 		})
 	}
 
-	fn scattering_pdf(&self, ray_in: Ray, hit_record: &HitRecord, scattered: Ray) -> f64 {
+	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f64 {
 		1.0 / (4.0 * PI)
 	}
 }

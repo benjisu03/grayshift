@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut image_file = File::create("image.ppm")?;
 
 
-	const SCENE: u8 = 12;
+	const SCENE: u8 = 6;
 
 	match SCENE {
 		12 => meshes(&mut image_file),
@@ -498,7 +498,7 @@ fn cornell_box(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		600,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
-			tolerance: 0.5,
+			tolerance: 0.001,
 			batch_size: 32,
 			max_samples: 1000
 		},
@@ -926,9 +926,9 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		600,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
-			tolerance: 0.01,
+			tolerance: 0.05,
 			batch_size: 32,
-			max_samples: 1000
+			max_samples: 100
 		},
 		2,
 		20.0,

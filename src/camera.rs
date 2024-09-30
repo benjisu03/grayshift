@@ -233,7 +233,10 @@ impl Camera {
 					world
 				);
 
-				let color_from_scatter = scatter_color * scatter_record.attenuation;
+				let scattering_pdf = hit_record.material.scattering_pdf(&ray, &hit_record, &scatter_record.scattered_ray);
+				let pdf_value = scatter_record.pdf;
+
+				let color_from_scatter = (scatter_record.attenuation * scattering_pdf * scatter_color) / pdf_value;
 
 				return emission_color + color_from_scatter;
 			}
