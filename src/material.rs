@@ -200,3 +200,11 @@ impl Material for Isotropic {
 		1.0 / (4.0 * PI)
 	}
 }
+
+pub struct EmptyMaterial {}
+
+impl EmptyMaterial {
+	pub fn new() -> Self { EmptyMaterial {} }
+}
+
+impl Material for EmptyMaterial {}

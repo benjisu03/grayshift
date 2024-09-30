@@ -13,7 +13,7 @@ use crate::util::util::{deg_to_rad, random_vector_in_unit_disk, rotate_vector};
 use crate::util::vec3::Vec3;
 
 use rayon::prelude::*;
-use crate::pdf::{CosinePDF, PDF};
+use crate::pdf::{CosinePDF, HittablePDF, PDF};
 
 pub struct Camera {
 	image_width: u32,
@@ -107,7 +107,7 @@ impl Camera {
 		}
 	}
 
-	pub fn render(&self, world: Box<dyn Hittable>, image_file: &mut File) -> std::io::Result<()> {
+	pub fn render(&self, world: Box<dyn Hittable>, lights: Arc<dyn Hittable>, image_file: &mut File) -> std::io::Result<()> {
 		writeln!(image_file, "P3")?;
 		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
 		writeln!(image_file, "255")?;
@@ -120,7 +120,7 @@ impl Camera {
 		pixels.par_iter().map(|n| {
 			let i = n % self.image_width;
 			let j = n / self.image_width;
-			self.sample(i, j, &world, progress.clone())
+			self.sample(i, j, &world, lights.clone(), progress.clone())
 		}).collect_into_vec(&mut colors);
 
 		for color in colors {
@@ -132,7 +132,7 @@ impl Camera {
 
 	// PRIVATE //
 
-	fn sample(&self, i: u32, j: u32, world: &Box<dyn Hittable>, progress: Arc<ProgressBar>) -> Vec3 {
+	fn sample(&self, i: u32, j: u32, world: &Box<dyn Hittable>, lights: Arc<dyn Hittable>, progress: Arc<ProgressBar>) -> Vec3 {
 		let mut pixel_color = Vec3::ZERO;
 
 		let tolerance_sq = self.sample_settings.tolerance * self.sample_settings.tolerance;
@@ -149,7 +149,7 @@ impl Camera {
 			for s_i in 0..self.batch_sqrt {
 				for s_j in 0..self.batch_sqrt {
 					let ray = self.get_ray(i, j, s_i, s_j);
-					let sample_color = self.ray_color(ray, self.max_depth, &world);
+					let sample_color = self.ray_color(ray, self.max_depth, &world, lights.clone());
 					pixel_color += sample_color;
 
 					// luminance allows 1D tolerance based on human perception
@@ -215,7 +215,7 @@ impl Camera {
 		self.center + v.x * self.defocus_disk_u + v.y * self.defocus_disk_v
 	}
 
-	fn ray_color(&self, ray: Ray, depth: u32, world: &Box<dyn Hittable>) -> Vec3 {
+	fn ray_color(&self, ray: Ray, depth: u32, world: &Box<dyn Hittable>, lights: Arc<dyn Hittable>) -> Vec3 {
 		if depth <= 0 { return Vec3::ZERO }
 
 		if let Some(hit_record) = world.hit(ray, Interval::new(0.001, f64::MAX)) {
@@ -228,15 +228,16 @@ impl Camera {
 			let material = hit_record.material.as_ref();
 			if let Some(scatter_record) = material.scatter(ray, &hit_record) {
 
-				let surface_pdf = CosinePDF::new(hit_record.normal);
-				let scatter_direction = surface_pdf.generate();
+				let light_pdf = HittablePDF::new(lights.clone(), hit_record.position);
+				let scatter_direction = light_pdf.generate();
 				let scattered_ray = Ray::new(hit_record.position, scatter_direction, ray.time);
-				let pdf_value = surface_pdf.value(scatter_direction);
+				let pdf_value = light_pdf.value(scatter_direction);
 
 				let scatter_color = self.ray_color(
 					scattered_ray,
 					depth - 1,
-					world
+					world,
+					lights.clone()
 				);
 
 				let scattering_pdf = hit_record.material.scattering_pdf(&ray, &hit_record, &scattered_ray);

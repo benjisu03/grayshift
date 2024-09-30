@@ -10,6 +10,8 @@ use crate::util::vec3::Vec3;
 pub trait Hittable: Send + Sync {
 	fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitRecord>;
 	fn bounding_box(&self) -> AABB;
+	fn pdf_value(&self, origin: Vec3, direction: Vec3) -> f64 { 0.0 }
+	fn random(&self, origin: Vec3) -> Vec3 { Vec3::new(1.0, 0.0, 0.0) }
 }
 
 pub struct HitRecord {

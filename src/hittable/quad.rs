@@ -11,6 +11,7 @@ use crate::util::vec3::Vec3;
 
 pub struct Quad {
 	plane: Plane,
+	area: f64,
 
 	q: Vec3,
 	u: Vec3,
@@ -33,8 +34,9 @@ impl Quad {
 		let w = n / n.dot(n);
 
 		let plane = Plane::new(normal, q);
+		let area = n.length();
 
-		Quad { plane, q, u, v, w, material, bbox }
+		Quad { plane, area, q, u, v, w, material, bbox }
 	}
 
 	pub fn is_in_mandelbrot(alpha: f64, beta: f64, max_iterations: usize) -> bool {
@@ -110,5 +112,20 @@ impl Hittable for Quad {
 
 	fn bounding_box(&self) -> AABB {
 		self.bbox
+	}
+
+	fn pdf_value(&self, origin: Vec3, direction: Vec3) -> f64 {
+		if let Some(hit_record) = self.hit(Ray::new(origin, direction, 0.0), Interval::new(0.001, f64::MAX)) {
+			let dist_sq = hit_record.t * hit_record.t * direction.length_squared();
+			let cosine = (direction.dot(hit_record.normal) / direction.length()).abs();
+			return dist_sq / (cosine * self.area);
+		}
+
+		0.0
+	}
+
+	fn random(&self, origin: Vec3) -> Vec3 {
+		let p = self.q + (fastrand::f64() * self.u) + (fastrand::f64() * self.v);
+		p - origin
 	}
 }
