@@ -94,7 +94,7 @@ impl Material for Metal {
 			return Some(ScatterRecord {
 				attenuation: self.albedo,
 				scattered_ray,
-				pdf: 0.0
+				pdf: 1.0
 			});
 		}
 
@@ -144,7 +144,7 @@ impl Material for Dielectric {
 		Some(ScatterRecord {
 			attenuation: Vec3::new(1.0, 1.0, 1.0),
 			scattered_ray: Ray::new(hit_record.position, direction, ray_in.time),
-			pdf: 0.0
+			pdf: 1.0
 		})
 	}
 }
