@@ -67,6 +67,10 @@ impl HittableList {
 		self.objects.push(object);
 	}
 
+	pub fn take_objects(self) -> Vec<Box<dyn Hittable>> {
+		self.objects
+	}
+
 }
 
 impl Hittable for HittableList {

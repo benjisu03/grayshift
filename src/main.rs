@@ -8,6 +8,7 @@ mod AABB;
 mod texture;
 mod ONB;
 mod pdf;
+mod gpu;
 
 use std::error::Error;
 use std::f64::consts::PI;
