@@ -1,67 +1,35 @@
 use std::f64::consts::PI;
-use std::sync::Arc;
-use crate::hittable::hittable::Hittable;
-use crate::ONB::OrthonormalBasis;
-use crate::util::util::{random_cosine_direction, random_unit_vector};
 use crate::util::vec3::Vec3;
 
-pub trait PDF {
-    fn value(&self, direction: Vec3) -> f64;
-    fn generate(&self) -> Vec3;
+pub struct PDFSample<T> {
+    pub sample: T,
+    pub pdf: f64
 }
 
-pub struct SpherePDF {}
-
-impl SpherePDF {}
-
-impl PDF for SpherePDF {
-    fn value(&self, direction: Vec3) -> f64 {
-        1.0 / (4.0 * PI)
-    }
-
-    fn generate(&self) -> Vec3 {
-        random_unit_vector()
-    }
+pub trait PDF<T> {
+    fn sample(&self) -> PDFSample<T>;
 }
 
-pub struct CosinePDF {
-    basis: OrthonormalBasis
-}
+pub struct CosineWeightedPDF {}
 
-impl CosinePDF {
-    pub fn new(normal: Vec3) -> CosinePDF {
-        CosinePDF { basis: OrthonormalBasis::new(normal) }
-    }
-}
+impl PDF<Vec3> for CosineWeightedPDF {
+    fn sample(&self) -> PDFSample<Vec3> {
+        let r1 = fastrand::f64();
+        let r2 = fastrand::f64();
 
-impl PDF for CosinePDF {
-    fn value(&self, direction: Vec3) -> f64 {
-        let cos_theta = direction.unit().dot(self.basis.w);
-        (cos_theta / PI).max(0.0)
-    }
+        let phi = 2.0 * PI * r1;
 
-    fn generate(&self) -> Vec3 {
-        self.basis.transform(random_cosine_direction())
-    }
-}
+        let (sin_phi, cos_phi) = phi.sin_cos();
+        let cos_theta = (1.0 - r2).sqrt();
+        let r2_sqrt = r2.sqrt();
 
-pub struct HittablePDF {
-    hittable: Arc<dyn Hittable>,
-    origin: Vec3
-}
+        let x = cos_phi * r2_sqrt;
+        let y = sin_phi * r2_sqrt;
+        let z = cos_theta;
 
-impl HittablePDF {
-    pub fn new(hittable: Arc<dyn Hittable>, origin: Vec3) -> HittablePDF {
-        HittablePDF { hittable, origin }
-    }
-}
+        let sample = Vec3::new(x, y, z);
+        let pdf = cos_theta / PI;
 
-impl PDF for HittablePDF {
-    fn value(&self, direction: Vec3) -> f64 {
-        self.hittable.pdf_value(self.origin, direction)
-    }
-
-    fn generate(&self) -> Vec3 {
-        self.hittable.random(self.origin)
+        PDFSample { sample, pdf }
     }
 }

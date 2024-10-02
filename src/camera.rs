@@ -13,7 +13,6 @@ use crate::util::util::{deg_to_rad, random_vector_in_unit_disk, rotate_vector};
 use crate::util::vec3::Vec3;
 
 use rayon::prelude::*;
-use crate::pdf::{CosinePDF, HittablePDF, PDF};
 
 pub struct Camera {
 	image_width: u32,
@@ -228,21 +227,16 @@ impl Camera {
 			let material = hit_record.material.as_ref();
 			if let Some(scatter_record) = material.scatter(ray, &hit_record) {
 
-				let light_pdf = HittablePDF::new(lights.clone(), hit_record.position);
-				let scatter_direction = light_pdf.generate();
-				let scattered_ray = Ray::new(hit_record.position, scatter_direction, ray.time);
-				let pdf_value = light_pdf.value(scatter_direction);
-
 				let scatter_color = self.ray_color(
-					scattered_ray,
+					scatter_record.scattered_ray,
 					depth - 1,
 					world,
 					lights.clone()
 				);
 
-				let scattering_pdf = hit_record.material.scattering_pdf(&ray, &hit_record, &scattered_ray);
+				let cos_theta = hit_record.normal.dot(scatter_record.scattered_ray.direction);
 
-				let color_from_scatter = (scatter_record.attenuation * scattering_pdf * scatter_color) / pdf_value;
+				let color_from_scatter = scatter_color * scatter_record.attenuation * cos_theta / scatter_record.pdf;
 
 				return emission_color + color_from_scatter;
 			}

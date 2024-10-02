@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use crate::hittable::hittable::HitRecord;
 use crate::ONB::OrthonormalBasis;
+use crate::pdf::{CosineWeightedPDF, PDFSample, PDF};
 use crate::ray::Ray;
 use crate::texture::{SolidColorTexture, Texture};
 use crate::util::util::{random_cosine_direction, random_unit_vector, random_vector_on_hemisphere};
@@ -21,8 +22,8 @@ pub trait Material: Send + Sync {
 }
 
 pub struct ScatterRecord {
-	pub scattered_ray: Ray,
 	pub attenuation: Vec3,
+	pub scattered_ray: Ray,
 	pub pdf: f64
 }
 
@@ -43,14 +44,20 @@ impl Lambertian {
 
 impl Material for Lambertian {
 	fn scatter(&self, ray_in: Ray, hit_record: &HitRecord) -> Option<ScatterRecord> {
-		let attenuation = self.texture.value_at(
+		let mut attenuation = self.texture.value_at(
 			hit_record.u,
 			hit_record.v,
 			hit_record.position
 		);
 
+		attenuation /= PI;
+
+		let pdf_sample = (CosineWeightedPDF{}).sample();
+		let pdf = pdf_sample.pdf;
+
+		// Reorient scatter around normal
 		let basis = OrthonormalBasis::new(hit_record.normal);
-		let scatter_direction = basis.transform(random_cosine_direction()).unit();
+		let scatter_direction = basis.transform(pdf_sample.sample).unit();
 
 		let scattered_ray = Ray::new(
 			hit_record.position,
@@ -58,18 +65,11 @@ impl Material for Lambertian {
 			ray_in.time
 		);
 
-		let pdf = (basis.w.dot(scatter_direction) / PI).max(0.0);
-
 		Some(ScatterRecord {
 			attenuation,
 			scattered_ray,
 			pdf
 		})
-	}
-
-	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f64 {
-		let cos_theta = hit_record.normal.dot(scattered.direction.unit());
-		if cos_theta < 0.0 { 0.0 } else { cos_theta / PI }
 	}
 }
 
