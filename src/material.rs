@@ -16,7 +16,7 @@ pub trait Material: Send + Sync {
 		hit_record: &HitRecord
 	) -> Option<ScatterRecord> { None }
 
-	fn emitted(&self, u: f64, v: f64, p: Vec3) -> Vec3 { Vec3::ZERO }
+	fn emitted(&self, hit_record: &HitRecord) -> Vec3 { Vec3::ZERO }
 	
 	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f64 { 0.0 }
 }
@@ -164,8 +164,12 @@ impl DiffuseLight {
 }
 
 impl Material for DiffuseLight {
-	fn emitted(&self, u: f64, v: f64, p: Vec3) -> Vec3 {
-		self.texture.value_at(u, v, p)
+	fn emitted(&self, hit_record: &HitRecord) -> Vec3 {
+		if !hit_record.is_front_face {
+			return Vec3::ZERO;
+		}
+
+		self.texture.value_at(hit_record.u, hit_record.v, hit_record.position)
 	}
 }
 

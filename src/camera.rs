@@ -219,11 +219,7 @@ impl Camera {
 		if depth <= 0 { return Vec3::ZERO }
 
 		if let Some(hit_record) = world.hit(ray, Interval::new(0.001, f64::MAX)) {
-			let emission_color = hit_record.material.emitted(
-				hit_record.u,
-				hit_record.v,
-				hit_record.position
-			);
+			let emission_color = hit_record.material.emitted(&hit_record);
 
 			let material = hit_record.material.as_ref();
 			if let Some(scatter_record) = material.scatter(ray, &hit_record) {
