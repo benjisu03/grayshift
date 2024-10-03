@@ -40,10 +40,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut image_file = File::create("image.ppm")?;
 
 
-	const SCENE: u8 = 6;
+	const SCENE: u8 = 12;
 
 	match SCENE {
-		// 12 => meshes(&mut image_file),
+		12 => meshes(&mut image_file),
 		// 11 => hdri(&mut image_file),
 		// 10 => triangles(&mut image_file),
 		// 9 => final_scene(&mut image_file, 800, 40),
@@ -897,63 +897,76 @@ fn cornell_box(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 //
 //   Ok(())
 // }
-//
-// fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
-//
-// 	let mut world = HittableList::new();
-// 	let metal = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
-//
-// 	let load_options = tobj::LoadOptions {
-// 		single_index: false,
-// 		triangulate: false,
-// 		ignore_points: false,
-// 		ignore_lines: false,
-// 	};
-// 	let (models, materials) = tobj::load_obj("bmw/bmw.obj", &load_options)?;
-// 	let materials = materials?;
-//
-// 	let lambertians: Vec<Arc<Lambertian>> = materials.iter().map(|material| {
-// 		Arc::new(Lambertian::from_color(Vec3::from(material.diffuse.unwrap())))
-// 	}).collect();
-//
-// 	for model in models {
-// 		let material = &lambertians[model.mesh.material_id.unwrap()];
-//
-// 		let mesh = Mesh::new(model.mesh, material.clone());
-// 		mesh.triangles.into_iter().for_each(|triangle| { world.add(Box::new(triangle))});
-// 	}
-//
-// 	let HDRI_file = File::open("airport.hdr")?;
-// 	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
-//
-// 	let camera_center = Vec3::new(-600.0, 300.0, 800.0);
-// 	let camera_look_at = Vec3::new(0.0, 100.0, 0.0);
-// 	let focus_distance = (camera_look_at - camera_center).length();
-//
-// 	let mut camera = Camera::new(
-// 		16.0 / 9.0,
-// 		600,
-// 		SampleSettings {
-// 			confidence: 0.95, // 95% confidence => 1.96
-// 			tolerance: 0.05,
-// 			batch_size: 32,
-// 			max_samples: 100
-// 		},
-// 		2,
-// 		20.0,
-// 		camera_center,
-// 		camera_look_at,
-// 		Vec3::new(0.0, 1.0, 0.0),
-// 		0.6,
-// 		focus_distance,
-// 		Background::HDRI(HDRI {
-// 			image: HDRI_image,
-// 			rotation: Vec3::new(PI / 2.0, PI, 0.0)
-// 		})
-// 	);
-//
-// 	let world_bvh = BVHNode::from_list(world);
-// 	camera.render(world_bvh, image_file)?;
-//
-// 	Ok(())
-// }
+
+fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
+
+	let mut world = HittableList::new();
+	let metal = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
+
+	let load_options = tobj::LoadOptions {
+		single_index: false,
+		triangulate: false,
+		ignore_points: false,
+		ignore_lines: false,
+	};
+	let (models, materials) = tobj::load_obj("bmw/bmw.obj", &load_options)?;
+	let materials = materials?;
+
+	let lambertians: Vec<Arc<Lambertian>> = materials.iter().map(|material| {
+		Arc::new(Lambertian::from_color(Vec3::from(material.diffuse.unwrap())))
+	}).collect();
+
+	for model in models {
+		let material = &lambertians[model.mesh.material_id.unwrap()];
+
+		let mesh = Mesh::new(model.mesh, material.clone());
+		mesh.triangles.into_iter().for_each(|triangle| { world.add(Box::new(triangle))});
+	}
+
+	let light_material = Arc::new(DiffuseLight::from_color(
+		Vec3::new(15.0, 15.0, 15.0)
+	));
+
+	world.add(Box::new(Quad::new(
+		Vec3::new(200.0, 600.0, 200.0),
+		Vec3::new(-400.0, 0.0, 0.0),
+		Vec3::new(0.0, 0.0, -400.0),
+		light_material.clone()
+	)));
+
+	let empty_material = Arc::new(EmptyMaterial::new());
+	let lights = Arc::new(Quad::new(
+		Vec3::new(200.0, 600.0, 200.0),
+		Vec3::new(-400.0, 0.0, 0.0),
+		Vec3::new(0.0, 0.0, -400.0),
+		empty_material
+	));
+
+	let camera_center = Vec3::new(-600.0, 300.0, 800.0);
+	let camera_look_at = Vec3::new(0.0, 100.0, 0.0);
+	let focus_distance = (camera_look_at - camera_center).length();
+
+	let mut camera = Camera::new(
+		16.0 / 9.0,
+		1600,
+		SampleSettings {
+			confidence: 0.95, // 95% confidence => 1.96
+			tolerance: 0.05,
+			batch_size: 32,
+			max_samples: 1000
+		},
+		2,
+		20.0,
+		camera_center,
+		camera_look_at,
+		Vec3::new(0.0, 1.0, 0.0),
+		0.6,
+		focus_distance,
+		Background::SOLID(Vec3::ZERO)
+	);
+
+	let world_bvh = BVHNode::from_list(world);
+	camera.render(world_bvh, lights, image_file)?;
+
+	Ok(())
+}
