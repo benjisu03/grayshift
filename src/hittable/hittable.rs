@@ -3,6 +3,7 @@ use crate::ray::Ray;
 use std::rc::Rc;
 use std::sync::Arc;
 use crate::AABB::AABB;
+use crate::pdf::PDFSample;
 use crate::util::interval::Interval;
 use crate::util::util::deg_to_rad;
 use crate::util::vec3::Vec3;
@@ -10,8 +11,9 @@ use crate::util::vec3::Vec3;
 pub trait Hittable: Send + Sync {
 	fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitRecord>;
 	fn bounding_box(&self) -> AABB;
-	fn pdf_value(&self, origin: Vec3, direction: Vec3) -> f64 { 0.0 }
-	fn random(&self, origin: Vec3) -> Vec3 { Vec3::new(1.0, 0.0, 0.0) }
+	fn sample_surface(&self, origin: Vec3) -> PDFSample<Vec3> {
+		PDFSample { sample: Vec3::ZERO, pdf: 0.0 }
+	}
 }
 
 pub struct HitRecord {

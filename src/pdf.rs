@@ -1,4 +1,6 @@
 use std::f64::consts::PI;
+use std::sync::Arc;
+use crate::hittable::hittable::Hittable;
 use crate::util::vec3::Vec3;
 
 pub struct PDFSample<T> {
@@ -31,5 +33,23 @@ impl PDF<Vec3> for CosineWeightedPDF {
         let pdf = cos_theta / PI;
 
         PDFSample { sample, pdf }
+    }
+}
+
+
+pub struct HittablePDF {
+    pub hittable: Arc<dyn Hittable>,
+    pub origin: Vec3
+}
+
+impl HittablePDF {
+    pub fn new(hittable: Arc<dyn Hittable>, origin: Vec3) -> Self {
+        HittablePDF { hittable, origin }
+    }
+}
+
+impl PDF<Vec3> for HittablePDF {
+    fn sample(&self) -> PDFSample<Vec3> {
+        self.hittable.sample_surface(self.origin)
     }
 }

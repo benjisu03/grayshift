@@ -5,6 +5,7 @@ use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
 use crate::hittable::plane::Plane;
 use crate::material::Material;
+use crate::pdf::PDFSample;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
 use crate::util::vec3::Vec3;
@@ -114,18 +115,19 @@ impl Hittable for Quad {
 		self.bbox
 	}
 
-	fn pdf_value(&self, origin: Vec3, direction: Vec3) -> f64 {
+	fn sample_surface(&self, origin: Vec3) -> PDFSample<Vec3> {
+		let sample = self.q + (fastrand::f64() * self.u) + (fastrand::f64() * self.v);
+		let direction = sample - origin;
+
 		if let Some(hit_record) = self.hit(Ray::new(origin, direction, 0.0), Interval::new(0.001, f64::MAX)) {
 			let dist_sq = hit_record.t * hit_record.t * direction.length_squared();
 			let cosine = (direction.dot(hit_record.normal) / direction.length()).abs();
-			return dist_sq / (cosine * self.area);
+
+			let pdf = dist_sq / (cosine * self.area);
+
+			return PDFSample { sample, pdf };
 		}
 
-		0.0
-	}
-
-	fn random(&self, origin: Vec3) -> Vec3 {
-		let p = self.q + (fastrand::f64() * self.u) + (fastrand::f64() * self.v);
-		p - origin
+		PDFSample { sample: Vec3::ZERO, pdf: 0.0 }
 	}
 }
