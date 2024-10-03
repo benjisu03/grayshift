@@ -52,23 +52,16 @@ impl Material for Lambertian {
 
 		attenuation /= PI;
 
-		let pdf_sample = (CosineWeightedPDF{}).sample();
-		let pdf = pdf_sample.pdf;
-
-		// Reorient scatter around normal
-		let basis = OrthonormalBasis::new(hit_record.normal);
-		let scatter_direction = basis.transform(pdf_sample.sample).unit();
-
 		let scattered_ray = Ray::new(
 			hit_record.position,
-			scatter_direction,
+			Vec3::ZERO,
 			ray_in.time
 		);
 
 		Some(ScatterRecord {
 			attenuation,
 			scattered_ray,
-			pdf
+			pdf: 0.0
 		})
 	}
 }

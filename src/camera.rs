@@ -13,7 +13,7 @@ use crate::util::util::{deg_to_rad, random_vector_in_unit_disk, rotate_vector};
 use crate::util::vec3::Vec3;
 
 use rayon::prelude::*;
-use crate::pdf::{HittablePDF, PDF};
+use crate::pdf::{CosineWeightedPDF, HittablePDF, MixturePDF, PDF};
 
 pub struct Camera {
 	image_width: u32,
@@ -224,8 +224,12 @@ impl Camera {
 			let material = hit_record.material.as_ref();
 			if let Some(scatter_record) = material.scatter(ray, &hit_record) {
 
-				let light_pdf = HittablePDF::new(lights.clone(), hit_record.position);
-				let sample = light_pdf.sample();
+
+				let light_pdf = Arc::new(HittablePDF::new(lights.clone(), hit_record.position));
+				let material_pdf = Arc::new(CosineWeightedPDF::new(hit_record.normal));
+				let mixture_pdf = MixturePDF::new(light_pdf, material_pdf);
+
+				let sample = mixture_pdf.sample();
 				let scatter_direction = (sample.sample - hit_record.position).unit();
 
 				let scattered_ray = Ray::new(hit_record.position, scatter_direction, ray.time);

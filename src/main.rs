@@ -510,7 +510,7 @@ fn cornell_box(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.001,
 			batch_size: 32,
-			max_samples: 100
+			max_samples: 1000
 		},
 		50,
 		40.0,
