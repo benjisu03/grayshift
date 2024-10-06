@@ -1,9 +1,8 @@
-use std::error::Error;
-use std::rc::Rc;
-use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
 use crate::ray::Ray;
 use crate::util::interval::Interval;
+use crate::AABB::AABB;
+use std::error::Error;
 
 pub struct BVH {
 	root: Box<BVHNode>,
@@ -19,6 +18,7 @@ enum BVHNode {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
  pub struct BVHNodeGPU {
 	left: u32,
 	right: u32,

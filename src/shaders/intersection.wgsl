@@ -27,14 +27,7 @@ struct BVHNode {
 	right: u32
 };
 
-// UNIFORMS //
-
-struct BVH {
-	nodes: array<BVHNode>,
-	size: u32
-};
-
-@group(0) @binding(0) var<storage> bvh: BVH;
+@group(0) @binding(0) var<storage, read> bvh: array<BVHNode>;
 
 // INPUT DATA //
 
@@ -56,7 +49,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 	let ray = rays[index];
 	let ray_inv = RayInverse(ray.origin, 1.0 / ray.direction);
 
-	results[index] = intersect_BVHNode(bvh.nodes[0], ray_inv);
+	results[index] = intersect_BVHNode(bvh[0], ray_inv);
 }
 
 // FUNCTIONS //
@@ -67,13 +60,13 @@ fn intersect_BVHNode(node: BVHNode, ray: RayInverse) -> IntersectionResult {
 
 	var left_hit = false;
 	if(node.left != U32_MAX) {
-		let left_node = bvh.nodes[node.left];
+		let left_node = bvh[node.left];
         left_hit = intersect_BVHNode(left_node, ray);
 	}
 
 	var right_hit = false;
     if(node.right != U32_MAX) {
-        let right_node = bvh.nodes[node.right];
+        let right_node = bvh[node.right];
         right_hit = intersect_BVHNode(right_node, ray);
     }
 

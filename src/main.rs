@@ -210,9 +210,9 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 		lights
 	};
 
-	engine.render(world)?;
+	// engine.render(world)?;
 
-	intersection_test()?;
+	intersection_test().await?;
 
 	Ok(())
 }
