@@ -9,30 +9,26 @@ mod texture;
 mod ONB;
 mod pdf;
 mod gpu;
+mod engine;
+mod output;
 
+use crate::camera::{Background, Camera, SampleSettings, HDRI};
+use crate::gpu::intersection_test;
+use crate::hittable::hittable::{Hittable, HittableList};
+use crate::hittable::sphere::Sphere;
+use crate::hittable::BVH::BVH;
+use crate::material::{Lambertian, Material, Metal};
+use crate::util::mesh::Mesh;
+use crate::util::vec3::Vec3;
+use log::LevelFilter;
 use std::error::Error;
 use std::f64::consts::PI;
-use crate::camera::{Background, Camera, SampleSettings, HDRI};
-use crate::hittable::hittable::{Hittable, HittableList, RotateY, Translate};
-use crate::material::{Dielectric, DiffuseLight, EmptyMaterial, Lambertian, Material, Metal};
-use crate::hittable::sphere::Sphere;
-use crate::util::util::{random_f64, random_vector};
-use crate::util::vec3::Vec3;
-use log::{info, LevelFilter};
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::mem;
 use std::sync::Arc;
-use image::error::UnsupportedErrorKind::Format;
 use wgpu::util::DeviceExt;
-use crate::gpu::intersection_test;
-use crate::hittable::BVH::BVH;
-use crate::util::mesh::Mesh;
-use crate::hittable::quad::Quad;
-use crate::hittable::triangle::Triangle;
-use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture, SolidColorTexture};
-use crate::hittable::volume::ConstantMedium;
-
+use crate::output::{PPMImage, RenderTarget};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -42,13 +38,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
 	logger.filter_level(LevelFilter::Trace);
 	logger.init();
 
-	let mut image_file = File::create("image.ppm")?;
+	let image_width = 600;
+	let aspect_ratio = 16.0 / 9.0;
+	let image_height = (image_width as f64 / aspect_ratio) as u32;
 
-	meshes(&mut image_file).await?;
+	let image = Box::new(PPMImage::new("image.ppm", image_width, image_height)?);
+
+	meshes(image).await?;
 	Ok(())
 }
 
-async fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
+async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Error>> {
 
 	let mut world = HittableList::new();
 	let metal = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
@@ -164,13 +164,14 @@ async fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let HDRI_file = File::open("airport.hdr")?;
 	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
 
+
+
 	let camera_center = Vec3::new(-600.0, 300.0, 800.0);
 	let camera_look_at = Vec3::new(0.0, 100.0, 0.0);
 	let focus_distance = (camera_look_at - camera_center).length();
 
 	let mut camera = Camera::new(
-		16.0 / 9.0,
-		600,
+		render_target,
 		SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.05,
@@ -193,7 +194,7 @@ async fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 	let lights = Arc::new(Sphere::new_stationary(Vec3::ZERO, 1.0, metal));
 
 	let world_bvh = BVH::new(world)?;
-	camera.render(Box::new(world_bvh), lights, image_file)?;
+	camera.render(Box::new(world_bvh), lights)?;
 
 	intersection_test()?;
 

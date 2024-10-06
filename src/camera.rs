@@ -1,3 +1,4 @@
+use std::error::Error;
 use crate::color::{luminance, write_color};
 use crate::ray::Ray;
 use indicatif::{ProgressBar, ProgressIterator};
@@ -13,10 +14,10 @@ use crate::util::util::{deg_to_rad, random_vector_in_unit_disk, rotate_vector};
 use crate::util::vec3::Vec3;
 
 use rayon::prelude::*;
+use crate::output::RenderTarget;
 
 pub struct Camera {
-	image_width: u32,
-	image_height: u32,
+	render_target: Box<dyn RenderTarget>,
 
 	sample_settings: SampleSettings,
 	batch_sqrt: u32,
@@ -40,8 +41,7 @@ impl Camera {
 
 	// PUBLIC //
 	pub fn new(
-		aspect_ratio: f64,
-		image_width: u32,
+		render_target: Box<dyn RenderTarget>,
 		sample_settings: SampleSettings,
 		max_depth: u32,
 		v_fov: f64,
@@ -52,7 +52,7 @@ impl Camera {
 		focus_distance: f64,
 		background: Background
 	) -> Self {
-		let image_height = (image_width as f64 / aspect_ratio) as u32;
+		let (image_width, image_height) = render_target.size();
 
 		let theta = v_fov / 180.0 * PI;
 		let h = f64::tan(theta / 2.0);
@@ -84,8 +84,7 @@ impl Camera {
 		let batch_sqrt_recip = 1.0 / (batch_sqrt as f64);
 
 		Camera {
-			image_width,
-			image_height,
+			render_target,
 
 			sample_settings,
 			batch_sqrt,
@@ -106,24 +105,24 @@ impl Camera {
 		}
 	}
 
-	pub fn render(&self, world: Box<dyn Hittable>, lights: Arc<dyn Hittable>, image_file: &mut File) -> std::io::Result<()> {
-		writeln!(image_file, "P3")?;
-		writeln!(image_file, "{} {}", self.image_width, self.image_height)?;
-		writeln!(image_file, "255")?;
+	pub fn render(&mut self, world: Box<dyn Hittable>, lights: Arc<dyn Hittable>) -> Result<(), Box<dyn Error>> {
+		self.render_target.init()?;
 
-		let pixels:Vec<u32> = (0..(self.image_width * self.image_height)).collect();
+		let (image_width, image_height) = self.render_target.size();
+
+		let pixels:Vec<u32> = (0..(image_width * image_height)).collect();
 		let mut colors = Vec::with_capacity(pixels.len());
 
 		let progress = Arc::new(ProgressBar::new(pixels.len() as u64));
 
 		pixels.par_iter().map(|n| {
-			let i = n % self.image_width;
-			let j = n / self.image_width;
+			let i = n % image_width;
+			let j = n / image_width;
 			self.sample(i, j, &world, lights.clone(), progress.clone())
 		}).collect_into_vec(&mut colors);
 
 		for color in colors {
-			write_color(image_file, color);
+			self.render_target.write_color(color)?;
 		}
 
 		Ok(())

@@ -5,7 +5,7 @@ use crate::util::vec3::Vec3;
 
 const INTENSITY: Interval = Interval { min: 0.000, max: 0.999 };
 
-pub fn write_color(image: &mut File, color: Vec3) {
+pub fn write_color(image: &mut File, color: Vec3) -> std::io::Result<()> {
 	let r = linear_to_gamma(color.x);
 	let g = linear_to_gamma(color.y);
 	let b = linear_to_gamma(color.z);
@@ -14,7 +14,8 @@ pub fn write_color(image: &mut File, color: Vec3) {
 	let g_byte = (256.0 * INTENSITY.clamp(g)) as i32;
 	let b_byte = (256.0 * INTENSITY.clamp(b)) as i32;
 
-	writeln!(image, "{r_byte} {g_byte} {b_byte}").unwrap();
+	writeln!(image, "{r_byte} {g_byte} {b_byte}")?;
+	Ok(())
 }
 
 fn linear_to_gamma(n: f64) -> f64 {
