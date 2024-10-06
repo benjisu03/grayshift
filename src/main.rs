@@ -12,6 +12,7 @@ mod gpu;
 mod engine;
 mod output;
 mod background;
+mod world;
 
 use crate::background::HDRIBackground;
 use crate::camera::Camera;
@@ -31,6 +32,7 @@ use std::mem;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use crate::engine::{Engine, RenderSettings, SampleSettings};
+use crate::world::World;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -52,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Error>> {
 
-	let mut world = HittableList::new();
+	let mut objects = HittableList::new();
 	let metal = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
 
 	let load_options = tobj::LoadOptions {
@@ -72,7 +74,7 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 		let material = &lambertians[model.mesh.material_id.unwrap()];
 
 		let mesh = Mesh::new(model.mesh, material.clone());
-		mesh.triangles.into_iter().for_each(|triangle| { world.add(Box::new(triangle))});
+		mesh.triangles.into_iter().for_each(|triangle| { objects.add(Box::new(triangle))});
 	}
 
 
@@ -202,9 +204,13 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 	);
 
 	let lights = Arc::new(Sphere::new_stationary(Vec3::ZERO, 1.0, metal));
+	let objects_bvh = BVH::new(objects)?;
+	let world = World {
+		objects: Box::new(objects_bvh),
+		lights
+	};
 
-	let world_bvh = BVH::new(world)?;
-	engine.render(Box::new(world_bvh), lights)?;
+	engine.render(world)?;
 
 	intersection_test()?;
 

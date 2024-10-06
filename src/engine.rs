@@ -10,6 +10,7 @@ use crate::output::RenderTarget;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
 use crate::util::vec3::Vec3;
+use crate::world::World;
 
 pub struct Engine {
     camera: Camera,
@@ -43,7 +44,7 @@ impl Engine {
         }
     }
 
-    pub fn render(&mut self, world: Box<dyn Hittable>, lights: Arc<dyn Hittable>) -> Result<(), Box<dyn Error>> {
+    pub fn render(&mut self, world: World) -> Result<(), Box<dyn Error>> {
         self.render_target.init()?;
 
         let (image_width, image_height) = self.render_target.size();
@@ -56,7 +57,7 @@ impl Engine {
         pixels.par_iter().map(|n| {
             let i = n % image_width;
             let j = n / image_width;
-            self.sample(i, j, &world, lights.clone(), progress.clone())
+            self.sample(i, j, &world, progress.clone())
         }).collect_into_vec(&mut colors);
 
         for color in colors {
@@ -66,7 +67,7 @@ impl Engine {
         Ok(())
     }
 
-    fn sample(&self, i: u32, j: u32, world: &Box<dyn Hittable>, lights: Arc<dyn Hittable>, progress: Arc<ProgressBar>) -> Vec3 {
+    fn sample(&self, i: u32, j: u32, world: &World, progress: Arc<ProgressBar>) -> Vec3 {
         let mut pixel_color = Vec3::ZERO;
 
         let tolerance_sq = self.render_settings.sample_settings.tolerance * self.render_settings.sample_settings.tolerance;
@@ -85,7 +86,7 @@ impl Engine {
                     let offset = self.stratified_square_sample(s_i, s_j);
                     let ray = self.camera.get_ray(offset, i, j);
 
-                    let sample_color = self.ray_color(ray, self.render_settings.max_ray_depth, &world, lights.clone());
+                    let sample_color = self.ray_color(ray, self.render_settings.max_ray_depth, world);
                     pixel_color += sample_color;
 
                     // luminance allows 1D tolerance based on human perception
@@ -129,10 +130,10 @@ impl Engine {
         )
     }
 
-    fn ray_color(&self, ray: Ray, depth: u32, world: &Box<dyn Hittable>, lights: Arc<dyn Hittable>) -> Vec3 {
+    fn ray_color(&self, ray: Ray, depth: u32, world: &World) -> Vec3 {
         if depth <= 0 { return Vec3::ZERO }
 
-        if let Some(hit_record) = world.hit(ray, Interval::new(0.001, f64::MAX)) {
+        if let Some(hit_record) = world.objects.hit(ray, Interval::new(0.001, f64::MAX)) {
             let emission_color = hit_record.material.emitted(
                 hit_record.u,
                 hit_record.v,
@@ -145,8 +146,7 @@ impl Engine {
                 let scatter_color = self.ray_color(
                     scatter_record.scattered_ray,
                     depth - 1,
-                    world,
-                    lights.clone()
+                    world
                 );
 
                 let cos_theta = hit_record.normal.dot(scatter_record.scattered_ray.direction);
