@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::rc::Rc;
 use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
@@ -5,41 +6,41 @@ use crate::ray::Ray;
 use crate::util::interval::Interval;
 
 pub struct BVH {
-	root: BVHNode,
+	root: Box<BVHNode>,
 }
 
 enum BVHNode {
 	Leaf(Box<dyn Hittable>),
 	Branch {
-		left: BVHNode::Leaf(_),
-		right: Option<BVHNode::Leaf(_)>,
+		left: Box<BVHNode>,
+		right: Option<Box<BVHNode>>,
 		bbox: AABB
 	}
 }
 
 #[repr(C)]
-struct BVHNodeGPU {
+ pub struct BVHNodeGPU {
 	left: u32,
 	right: u32,
 	bbox: AABB
 }
 
 impl BVH {
-	pub fn new(list: HittableList) -> Result<Self, Self::Error> {
+	pub fn new(list: HittableList) -> Result<Self, Box<dyn Error>> {
 		let mut objects = list.take_objects();
 		if objects.is_empty() {
-			return Err("BVH cannot be built from empty list");
+			return Err(Box::from("BVH cannot be built from empty list"));
 		}
 
 		let root = BVH::build(objects);
 		Ok(BVH { root })
 	}
 
-	fn build(mut objects: Vec<Box<dyn Hittable>>) -> BVHNode {
+	fn build(mut objects: Vec<Box<dyn Hittable>>) -> Box<BVHNode> {
 
 		if objects.len() == 1 {
 			let obj = objects.swap_remove(0);
-			return BVHNode::Leaf(obj);
+			return Box::new(BVHNode::Leaf(obj));
 		}
 
 		let mut bbox = AABB::EMPTY;
@@ -60,23 +61,49 @@ impl BVH {
 		let left_objs = objects;
 
 		let left = BVH::build(left_objs);
-		let right = BVH::build(right_objs);
+		let right = Some(BVH::build(right_objs));
 
-		BVHNode::Branch { left, right: Some(right), bbox }
+		Box::new(BVHNode::Branch { left, right, bbox })
 	}
 
 	pub fn to_gpu(&self) -> Vec<BVHNodeGPU> {
 		let mut flattened = Vec::new();
-
+		BVH::flatten(self.root.as_ref(), &mut flattened);
+		flattened
 	}
 
-	fn flatten(node: BVHNode, flattened: &mut Vec<BVHNodeGPU>) -> u32 {
-		let node_index = flattened.len() as u32;
+	fn flatten(node: &BVHNode, flattened: &mut Vec<BVHNodeGPU>) -> u32 {
 		match node {
+			BVHNode::Leaf(hittable) => {
+				let node_index = flattened.len() as u32;
+				flattened.push(BVHNodeGPU {
+					left: u32::MAX,
+					right: u32::MAX,
+					bbox: hittable.bounding_box()
+				});
 
+				node_index
+			},
+			BVHNode::Branch { left, right, bbox } => {
+				let left_index = BVH::flatten(left, flattened);
+
+				let right_index = if let Some(right_node) = right {
+					BVH::flatten(right_node, flattened)
+				} else {
+					u32::MAX
+				};
+
+				let node_index = flattened.len() as u32;
+				flattened.push(BVHNodeGPU {
+					left: left_index,
+					right: right_index,
+					bbox: *bbox
+				});
+
+				node_index
+			}
 		}
-
-		node_index
+	}
 }
 
 impl Hittable for BVH {
@@ -118,10 +145,10 @@ impl Hittable for BVHNode {
 		}
 	}
 
-		fn bounding_box(&self) -> AABB {
-			match self {
-				BVHNode::Leaf(object) => { object.bounding_box() }
-				BVHNode::Branch { left, right, bbox} => { *bbox }
-			}
+	fn bounding_box(&self) -> AABB {
+		match self {
+			BVHNode::Leaf(object) => { object.bounding_box() }
+			BVHNode::Branch { left, right, bbox} => { *bbox }
 		}
+	}
 }

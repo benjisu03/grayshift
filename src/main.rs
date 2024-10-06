@@ -25,8 +25,9 @@ use std::mem;
 use std::sync::Arc;
 use image::error::UnsupportedErrorKind::Format;
 use wgpu::util::DeviceExt;
+use crate::gpu::intersection_test;
+use crate::hittable::BVH::BVH;
 use crate::util::mesh::Mesh;
-use crate::hittable::BVH::BVHNode;
 use crate::hittable::quad::Quad;
 use crate::hittable::triangle::Triangle;
 use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture, SolidColorTexture};
@@ -191,8 +192,10 @@ async fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 
 	let lights = Arc::new(Sphere::new_stationary(Vec3::ZERO, 1.0, metal));
 
-	let world_bvh = BVHNode::from_list(world);
-	camera.render(world_bvh, lights, image_file)?;
+	let world_bvh = BVH::new(world)?;
+	camera.render(Box::new(world_bvh), lights, image_file)?;
+
+	intersection_test()?;
 
 	Ok(())
 }
