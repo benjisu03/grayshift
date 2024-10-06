@@ -14,23 +14,24 @@ use crate::util::util::{deg_to_rad, random_vector_in_unit_disk, rotate_vector};
 use crate::util::vec3::Vec3;
 
 use rayon::prelude::*;
+use crate::background::Background;
 use crate::output::RenderTarget;
 
 pub struct Camera {
 	render_target: Box<dyn RenderTarget>,
+	background: Box<dyn Background>,
 
 	sample_settings: SampleSettings,
 	batch_sqrt: u32,
+
 	batch_sqrt_recip: f64,
 
 	max_depth: u32,
-
 	center: Vec3,
 	starting_pixel_pos: Vec3,
 	pixel_delta_u: Vec3,
-	pixel_delta_v: Vec3,
 
-	background: Background,
+	pixel_delta_v: Vec3,
 
 	defocus_angle: f64,
 	defocus_disk_u: Vec3,
@@ -50,7 +51,7 @@ impl Camera {
 		vup: Vec3,
 		defocus_angle: f64,
 		focus_distance: f64,
-		background: Background
+		background: Box<dyn Background>
 	) -> Self {
 		let (image_width, image_height) = render_target.size();
 
@@ -243,14 +244,7 @@ impl Camera {
 			return emission_color;
 		}
 
-		self.sample_background(&ray)
-	}
-
-	fn sample_background(&self, ray: &Ray) -> Vec3 {
-		match &self.background {
-			Background::SOLID(color) => { *color }
-			Background::HDRI(HDRI) => { HDRI.sample(ray.direction) }
-		}
+		self.background.sample(ray.direction)
 	}
 
 
@@ -262,31 +256,4 @@ pub struct SampleSettings {
 	pub tolerance: f64,
 	pub batch_size: u32,
 	pub max_samples: u32
-}
-
-pub enum Background {
-	SOLID(Vec3),
-	HDRI(HDRI)
-}
-
-pub struct HDRI {
-	pub image: radiant::Image,
-	pub rotation: Vec3
-}
-
-impl HDRI {
-	pub fn sample(&self, direction: Vec3) -> Vec3 {
-		let rotated = rotate_vector(direction, self.rotation).unit();
-		let theta = rotated.y.atan2(rotated.x);
-		let phi = rotated.z.asin();
-
-		let u = 0.5 + theta / (2.0 * PI);
-		let v = 0.5 - phi / PI;
-
-		let x = ((u * (self.image.width as f64)) as usize) % self.image.width;
-		let y = ((v * (self.image.height as f64)) as usize) % self.image.height;
-
-		let color = self.image.pixel(x, y);
-		Vec3::new(color.r as f64, color.g as f64, color.b as f64)
-	}
 }

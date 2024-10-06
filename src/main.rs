@@ -11,24 +11,25 @@ mod pdf;
 mod gpu;
 mod engine;
 mod output;
+mod background;
 
-use crate::camera::{Background, Camera, SampleSettings, HDRI};
+use crate::background::HDRIBackground;
+use crate::camera::{Camera, SampleSettings};
 use crate::gpu::intersection_test;
 use crate::hittable::hittable::{Hittable, HittableList};
 use crate::hittable::sphere::Sphere;
 use crate::hittable::BVH::BVH;
 use crate::material::{Lambertian, Material, Metal};
+use crate::output::{PPMImage, RenderTarget};
 use crate::util::mesh::Mesh;
 use crate::util::vec3::Vec3;
 use log::LevelFilter;
 use std::error::Error;
 use std::f64::consts::PI;
-use std::fs::File;
-use std::io::{BufReader, Write};
+use std::io::Write;
 use std::mem;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
-use crate::output::{PPMImage, RenderTarget};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -161,8 +162,10 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 	}
 
 
-	let HDRI_file = File::open("airport.hdr")?;
-	let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
+	let background = Box::new(HDRIBackground::new(
+		"airport.hdr",
+		Vec3::new(PI / 2.0, PI, 0.0)
+	)?);
 
 
 
@@ -185,10 +188,7 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 		Vec3::new(0.0, 1.0, 0.0),
 		0.6,
 		focus_distance,
-		Background::HDRI(HDRI {
-			image: HDRI_image,
-			rotation: Vec3::new(PI / 2.0, PI, 0.0)
-		})
+		background
 	);
 
 	let lights = Arc::new(Sphere::new_stationary(Vec3::ZERO, 1.0, metal));
