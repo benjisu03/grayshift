@@ -14,7 +14,7 @@ mod output;
 mod background;
 
 use crate::background::HDRIBackground;
-use crate::camera::{Camera, SampleSettings};
+use crate::camera::Camera;
 use crate::gpu::intersection_test;
 use crate::hittable::hittable::{Hittable, HittableList};
 use crate::hittable::sphere::Sphere;
@@ -30,6 +30,7 @@ use std::io::Write;
 use std::mem;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
+use crate::engine::{Engine, RenderSettings, SampleSettings};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -173,28 +174,37 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 	let camera_look_at = Vec3::new(0.0, 100.0, 0.0);
 	let focus_distance = (camera_look_at - camera_center).length();
 
-	let mut camera = Camera::new(
-		render_target,
-		SampleSettings {
+	let render_settings = RenderSettings {
+		sample_settings: SampleSettings {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.05,
 			batch_size: 32,
 			max_samples: 100
 		},
-		2,
+		max_ray_depth: 2,
+	};
+
+	let camera = Camera::new(
+		render_target.size(),
 		20.0,
 		camera_center,
 		camera_look_at,
 		Vec3::new(0.0, 1.0, 0.0),
 		0.6,
-		focus_distance,
-		background
+		focus_distance
+	);
+
+	let mut engine = Engine::new(
+		camera,
+		render_target,
+		background,
+		render_settings
 	);
 
 	let lights = Arc::new(Sphere::new_stationary(Vec3::ZERO, 1.0, metal));
 
 	let world_bvh = BVH::new(world)?;
-	camera.render(Box::new(world_bvh), lights)?;
+	engine.render(Box::new(world_bvh), lights)?;
 
 	intersection_test()?;
 
