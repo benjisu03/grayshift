@@ -3,6 +3,7 @@ use crate::ray::Ray;
 use crate::util::interval::Interval;
 use crate::AABB::AABB;
 use std::error::Error;
+use crate::gpu::AABBGPU;
 
 pub struct BVH {
 	root: Box<BVHNode>,
@@ -22,7 +23,7 @@ enum BVHNode {
  pub struct BVHNodeGPU {
 	left: u32,
 	right: u32,
-	bbox: AABB
+	bbox: AABBGPU
 }
 
 impl BVH {
@@ -79,7 +80,7 @@ impl BVH {
 				flattened.push(BVHNodeGPU {
 					left: u32::MAX,
 					right: u32::MAX,
-					bbox: hittable.bounding_box()
+					bbox: AABBGPU::from(hittable.bounding_box())
 				});
 
 				node_index
@@ -97,7 +98,7 @@ impl BVH {
 				flattened.push(BVHNodeGPU {
 					left: left_index,
 					right: right_index,
-					bbox: *bbox
+					bbox: AABBGPU::from(*bbox)
 				});
 
 				node_index

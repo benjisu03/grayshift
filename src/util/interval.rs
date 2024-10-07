@@ -1,7 +1,6 @@
 use std::ops::Add;
 
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, Debug)]
 pub struct Interval {
 	pub min: f64,
 	pub max: f64

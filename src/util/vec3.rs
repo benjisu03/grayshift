@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 pub struct Vec3 {
 	pub x: f64,
 	pub y: f64,

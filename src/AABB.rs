@@ -3,8 +3,7 @@ use crate::ray::Ray;
 use crate::util::interval::Interval;
 use crate::util::vec3::Vec3;
 
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Debug, Clone, Copy)]
 pub struct AABB {
 	pub x: Interval,
 	pub y: Interval,
