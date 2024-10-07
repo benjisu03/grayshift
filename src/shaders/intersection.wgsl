@@ -43,6 +43,7 @@ struct BVHNode {
 // CONSTANTS //
 
 const U32_MAX: u32 = 0xFFFFFFFFu;
+const F32_MAX: f32 = 3.402823466e+38;
 const STACK_SIZE: u32 = 32;
 
 // MAIN //
@@ -66,7 +67,35 @@ fn intersect_BVH(ray: RayInverse) -> IntersectionResult {
 	var stack = array<u32, STACK_SIZE>();
 	var stack_size = 0;
 
-	return IntersectionResult(0, ray.origin.z);
+	var result = IntersectionResult(U32_MAX, F32_MAX);
+	var current_node = 0;
+	var last_visited = U32_MAX;
+
+	stack[stack_size] = 0;
+	stack_size++;
+
+	loop {
+		if((stack_size == 0 || stack_size == STACK_SIZE) && current_node == U32_MAX) {
+            return result;
+        }
+
+		if(current_node != U32_MAX) {
+			// go to left node
+			stack_stack[stack_size] = current_node;
+			stack_size++;
+			current_node = bvh[current_node].left;
+		} else {
+			var peek_node = stack[stack_size - 1];
+
+			if(bvh[peek_node].right != U32_MAX && last_visited != bvh[peek_node].right) {
+				// go to right node
+				current_node = bvh[peek_node].right;
+			} else {
+
+		}
+
+
+	}
 }
 
 
