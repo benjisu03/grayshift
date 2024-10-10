@@ -2,16 +2,16 @@ use std::ops::Add;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Interval {
-	pub min: f64,
-	pub max: f64
+	pub min: f32,
+	pub max: f32
 }
 
 impl Interval {
-	pub const EMPTY: Interval = Interval { min: f64::MAX, max: f64::MIN };
-	pub const UNIVERSE: Interval = Interval { min: f64::MIN, max: f64::MAX };
+	pub const EMPTY: Interval = Interval { min: f32::MAX, max: f32::MIN };
+	pub const UNIVERSE: Interval = Interval { min: f32::MIN, max: f32::MAX };
 	pub const UNIT: Interval = Interval { min: 0.0, max: 1.0 };
 
-	pub fn new(min: f64, max: f64) -> Self {
+	pub fn new(min: f32, max: f32) -> Self {
 		Interval { min, max }
 	}
 
@@ -22,32 +22,32 @@ impl Interval {
 		}
 	}
 
-	pub fn size(&self) -> f64 {
+	pub fn size(&self) -> f32 {
 		self.max - self.min
 	}
 
-	pub fn contains(&self, t: f64) -> bool {
+	pub fn contains(&self, t: f32) -> bool {
 		self.min <= t && t <= self.max
 	}
 
-	pub fn surrounds(&self, t: f64) -> bool {
+	pub fn surrounds(&self, t: f32) -> bool {
 		self.min < t && t < self.max
 	}
 
-	pub fn clamp(&self, t: f64) -> f64 {
+	pub fn clamp(&self, t: f32) -> f32 {
 		t.clamp(self.min, self.max)
 	}
 
-	pub fn expand(&self, delta: f64) -> Interval {
+	pub fn expand(&self, delta: f32) -> Interval {
 		let padding = delta / 2.0;
 		Interval::new(self.min - padding, self.max + padding)
 	}
 }
 
-impl Add<f64> for Interval {
+impl Add<f32> for Interval {
 	type Output = Self;
 
-	fn add(self, rhs: f64) -> Self::Output {
+	fn add(self, rhs: f32) -> Self::Output {
 		Interval {
 			min: self.min + rhs,
 			max: self.max + rhs

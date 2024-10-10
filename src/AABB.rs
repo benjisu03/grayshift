@@ -1,4 +1,5 @@
 use std::ops::{Add, Index};
+use nalgebra::Vector3;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
 use crate::util::vec3::Vec3;
@@ -21,7 +22,7 @@ impl AABB {
 		AABB { x, y, z }
 	}
 
-	pub fn from_corners(a: Vec3, b: Vec3) -> Self {
+	pub fn from_corners(a: Vector3<f32>, b: Vector3<f32>) -> Self {
 		let x = if a.x <= b.x {
 			Interval::new(a.x, b.x)
 		} else {
@@ -141,10 +142,10 @@ impl Index<usize> for AABB {
 	}
 }
 
-impl Add<Vec3> for AABB {
+impl Add<Vector3<f32>> for AABB {
 	type Output = Self;
 
-	fn add(self, rhs: Vec3) -> Self::Output {
+	fn add(self, rhs: Vector3<f32>) -> Self::Output {
 		AABB {
 			x: self.x + rhs.x,
 			y: self.y + rhs.y,

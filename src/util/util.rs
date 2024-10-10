@@ -1,70 +1,67 @@
 use std::f64::consts::PI;
 use fastrand::f64;
+use nalgebra::Vector3;
 use crate::util::vec3::Vec3;
 
-pub fn random_f64(min: f64, max: f64) -> f64 {
-	fastrand::f64() * (max - min) + min
+pub fn random_f32(min: f32, max: f32) -> f32 {
+	fastrand::f32() * (max - min) + min
 }
 
-pub fn random_vector(min: f64, max: f64) -> Vec3 {
-	Vec3 {
-		x: random_f64(min, max),
-		y: random_f64(min, max),
-		z: random_f64(min, max),
-
-	}
+pub fn random_vector(min: f32, max: f32) -> Vector3<f32> {
+	Vector3::new(
+		random_f32(min, max),
+		random_f32(min, max),
+		random_f32(min, max),
+	)
 }
 
-pub fn random_vector_in_unit_sphere() -> Vec3 {
+pub fn random_vector_in_unit_sphere() -> Vector3<f32> {
 	loop {
 		let v = random_vector(-1.0, 1.0);
-		if v.length_squared() < 1.0 {
+		if v.magnitude_squared() < 1.0 {
 			return v;
 		}
 	}
 }
 
-pub fn random_unit_vector() -> Vec3 {
-	random_vector_in_unit_sphere().unit()
+pub fn random_unit_vector() -> Vector3<f32> {
+	random_vector_in_unit_sphere().normalize()
 }
 
-pub fn random_vector_on_hemisphere(normal: Vec3) -> Vec3 {
+pub fn random_vector_on_hemisphere(normal: Vector3<f32>) -> Vector3<f32> {
 	let v = random_unit_vector();
-	if v.dot(normal) > 0.0 { v } else { -v }
+	if v.dot(&normal) > 0.0 { v } else { -v }
 }
 
-pub fn random_vector_in_unit_disk() -> Vec3 {
+pub fn random_vector_in_unit_disk() -> Vector3<f32> {
 	loop {
-		let v = Vec3::new(
-			random_f64(-1.0, 1.0),
-			random_f64(-1.0, 1.0),
+		let v = Vector3::new(
+			random_f32(-1.0, 1.0),
+			random_f32(-1.0, 1.0),
 			0.0,
 		);
 
-		if v.length_squared() < 1.0 { return v; }
+		if v.magnitude_squared() < 1.0 { return v; }
 	}
 }
 
-pub fn random_cosine_direction() -> Vec3 {
-	let r_1 = fastrand::f64();
-	let r_2 = fastrand::f64();
+pub fn random_cosine_direction() -> Vector3<f32> {
+	let r1 = fastrand::f32();
+	let r2 = fastrand::f32();
 
-	let phi = 2.0 * PI * r_1;
-	let r_2_sqrt = f64::sqrt(r_2);
+	let phi = 2.0 * std::f32::consts::PI * r1;
 
-	let x = f64::cos(phi) * r_2_sqrt;
-	let y = f64::sin(phi) * r_2_sqrt;
-	let z = f64::sqrt(1.0 - r_2);
+	let r2_sqrt = r2.sqrt();
+	let (sin, cos) = phi.sin_cos();
 
-	Vec3 { x, y, z }
+	let x = cos * r2_sqrt;
+	let y = sin * r2_sqrt;
+	let z = (1.0 - r2).sqrt();
+
+	Vector3::new(x, y, z)
 }
 
-pub fn deg_to_rad(degrees: f64) -> f64 {
-	degrees / 180.0 * PI
-}
-
-
-pub fn rotate_vector(vector: Vec3, rotation: Vec3) -> Vec3 {
+pub fn rotate_vector(vector: Vector3<f32>, rotation: Vector3<f32>) -> Vector3<f32> {
 	let (sin_x, cos_x) = rotation.x.sin_cos();
 	let (sin_y, cos_y) = rotation.y.sin_cos();
 	let (sin_z, cos_z) = rotation.z.sin_cos();
@@ -82,5 +79,17 @@ pub fn rotate_vector(vector: Vec3, rotation: Vec3) -> Vec3 {
 		vector.y * (-sin_x * cos_y) +
 		vector.z * (cos_x * cos_y);
 
-	Vec3::new(x, y, z)
+	Vector3::new(x, y, z)
+}
+
+pub fn reflect(v: &Vector3<f32>, n: &Vector3<f32>) -> Vector3<f32> {
+	v - 2.0 * v.dot(n) * n
+}
+
+pub fn refract(v: &Vector3<f32>, n: &Vector3<f32>, refractive_ratio: f32) -> Vector3<f32> {
+	let cos_theta = (-*v).dot(n).min(1.0);
+	let r_out_perp = refractive_ratio * (*v + cos_theta * *n);
+	let r_out_parallel = -(1.0 - r_out_perp.magnitude_squared()).abs().sqrt() * *n;
+
+	r_out_perp + r_out_parallel
 }

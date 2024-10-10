@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::sync::Arc;
+use nalgebra::Vector3;
 use wgpu::{BindGroupDescriptor, BindGroupEntry, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePipelineDescriptor, MapMode};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use crate::AABB::AABB;
@@ -15,23 +16,23 @@ use crate::util::vec3::Vec3;
 
 pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 
-    let material = Arc::new(Lambertian::from_color(Vec3::new(0.5, 0.5, 0.5)));
+    let material = Arc::new(Lambertian::from_color(Vector3::new(0.5, 0.5, 0.5)));
 
-    let center1 = Vec3::new(0.0, 0.0, 0.0);
+    let center1 = Vector3::new(0.0, 0.0, 0.0);
     let s1 = Box::new(Sphere::new_stationary(
         center1,
         1.0,
         material.clone()
     ));
 
-    let center2 = Vec3::new(3.0, 0.0, 0.0);
+    let center2 = Vector3::new(3.0, 0.0, 0.0);
     let s2 = Box::new(Sphere::new_stationary(
         center2,
         1.0,
         material.clone()
     ));
 
-    let center3 = Vec3::new(5.0, 0.0, 0.0);
+    let center3 = Vector3::new(5.0, 0.0, 0.0);
     let s3 = Box::new(Sphere::new_stationary(
         center3,
         1.0,
@@ -43,7 +44,7 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
     objects.add(s2);
     objects.add(s3);
 
-    let camera_center = Vec3::new(0.0, 0.0, 10.0);
+    let camera_center = Vector3::new(0.0, 0.0, 10.0);
 
     let r1 = Ray::new(
         camera_center,

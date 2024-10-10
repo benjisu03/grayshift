@@ -1,12 +1,13 @@
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 use std::rc::Rc;
 use std::sync::Arc;
+use nalgebra::Vector3;
 use crate::hittable::hittable::HitRecord;
 use crate::ONB::OrthonormalBasis;
 use crate::pdf::{CosineWeightedPDF, PDFSample, PDF};
 use crate::ray::Ray;
 use crate::texture::{SolidColorTexture, Texture};
-use crate::util::util::{random_cosine_direction, random_unit_vector, random_vector_on_hemisphere};
+use crate::util::util::{random_cosine_direction, random_unit_vector, random_vector_on_hemisphere, reflect, refract};
 use crate::util::vec3::Vec3;
 
 pub trait Material: Send + Sync {
@@ -16,15 +17,15 @@ pub trait Material: Send + Sync {
 		hit_record: &HitRecord
 	) -> Option<ScatterRecord> { None }
 
-	fn emitted(&self, u: f64, v: f64, p: Vec3) -> Vec3 { Vec3::ZERO }
+	fn emitted(&self, u: f32, v: f32, p: Vector3<f32>) -> Vector3<f32> { Vector3::new(0.0, 0.0, 0.0) }
 	
-	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f64 { 0.0 }
+	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f32 { 0.0 }
 }
 
 pub struct ScatterRecord {
-	pub attenuation: Vec3,
+	pub attenuation: Vector3<f32>,
 	pub scattered_ray: Ray,
-	pub pdf: f64
+	pub pdf: f32
 }
 
 pub struct Lambertian {
@@ -33,7 +34,7 @@ pub struct Lambertian {
 
 
 impl Lambertian {
-	pub fn from_color(albedo: Vec3) -> Self {
+	pub fn from_color(albedo: Vector3<f32>) -> Self {
 		Lambertian { texture: Arc::new(SolidColorTexture::new(albedo)) }
 	}
 
@@ -50,14 +51,14 @@ impl Material for Lambertian {
 			hit_record.position
 		);
 
-		attenuation /= PI;
+		attenuation /= std::f32::consts::PI;
 
 		let pdf_sample = (CosineWeightedPDF{}).sample();
 		let pdf = pdf_sample.pdf;
 
 		// Reorient scatter around normal
 		let basis = OrthonormalBasis::new(hit_record.normal);
-		let scatter_direction = basis.transform(pdf_sample.sample).unit();
+		let scatter_direction = basis.transform(pdf_sample.sample).normalize();
 
 		let scattered_ray = Ray::new(
 			hit_record.position,
@@ -74,23 +75,23 @@ impl Material for Lambertian {
 }
 
 pub struct Metal {
-	albedo: Vec3,
-	fuzz: f64
+	albedo: Vector3<f32>,
+	fuzz: f32
 }
 
 impl Metal {
-	pub fn new(albedo: Vec3, fuzz: f64) -> Self {
+	pub fn new(albedo: Vector3<f32>, fuzz: f32) -> Self {
 		Metal { albedo, fuzz }
 	}
 }
 
 impl Material for Metal {
 	fn scatter(&self, ray_in: Ray, hit_record: &HitRecord) -> Option<ScatterRecord> {
-		let mut reflected = ray_in.direction.reflect(hit_record.normal);
-		reflected = reflected.unit() + self.fuzz * random_unit_vector();
+		let mut reflected = reflect(&ray_in.direction, &hit_record.normal);
+		reflected = reflected.normalize() + self.fuzz * random_unit_vector();
 
 		let scattered_ray = Ray::new(hit_record.position, reflected, ray_in.time);
-		if scattered_ray.direction.dot(hit_record.normal) > 0.0 {
+		if scattered_ray.direction.dot(&hit_record.normal) > 0.0 {
 			return Some(ScatterRecord {
 				attenuation: self.albedo,
 				scattered_ray,
@@ -104,19 +105,19 @@ impl Material for Metal {
 }
 
 pub struct Dielectric {
-	refraction_index: f64
+	refraction_index: f32
 }
 
 impl Dielectric {
-	pub fn new(refraction_index: f64) -> Self {
+	pub fn new(refraction_index: f32) -> Self {
 		Dielectric { refraction_index }
 	}
 
-	pub fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
+	pub fn reflectance(cosine: f32, refraction_index: f32) -> f32 {
 		// Schlick's approximation
 		let mut r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
 		r0 = r0 * r0;
-		r0 + (1.0 - r0) * f64::powi(1.0 - cosine, 5)
+		r0 + (1.0 - r0) * f32::powi(1.0 - cosine, 5)
 	}
 }
 
@@ -128,21 +129,21 @@ impl Material for Dielectric {
 			self.refraction_index
 		};
 
-		let unit_direction = ray_in.direction.unit();
-		let cos_theta = f64::min((-unit_direction).dot(hit_record.normal), 1.0);
-		let sin_theta = f64::sqrt(1.0 - cos_theta * cos_theta);
+		let unit_direction = ray_in.direction.normalize();
+		let cos_theta = f32::min((-unit_direction).dot(&hit_record.normal), 1.0);
+		let sin_theta = f32::sqrt(1.0 - cos_theta * cos_theta);
 
 		let cannot_refract = ri * sin_theta > 1.0;
-		let fresnel_reflection = Self::reflectance(cos_theta, ri) > fastrand::f64();
+		let fresnel_reflection = Self::reflectance(cos_theta, ri) > fastrand::f32();
 		let direction = if cannot_refract || fresnel_reflection {
-			unit_direction.reflect(hit_record.normal)
+			reflect(&unit_direction, &hit_record.normal)
 		} else {
-			unit_direction.refract(hit_record.normal, ri)
+			refract(&unit_direction, &hit_record.normal, ri)
 		};
 
 
 		Some(ScatterRecord {
-			attenuation: Vec3::new(1.0, 1.0, 1.0),
+			attenuation: Vector3::new(1.0, 1.0, 1.0),
 			scattered_ray: Ray::new(hit_record.position, direction, ray_in.time),
 			pdf: 1.0
 		})
@@ -158,13 +159,13 @@ impl DiffuseLight {
 		DiffuseLight { texture }
 	}
 
-	pub fn from_color(color: Vec3) -> Self {
+	pub fn from_color(color: Vector3<f32>) -> Self {
 		DiffuseLight { texture: Arc::new(SolidColorTexture::new(color) )}
 	}
 }
 
 impl Material for DiffuseLight {
-	fn emitted(&self, u: f64, v: f64, p: Vec3) -> Vec3 {
+	fn emitted(&self, u: f32, v: f32, p: Vec3) -> Vec3 {
 		self.texture.value_at(u, v, p)
 	}
 }
@@ -178,7 +179,7 @@ impl Isotropic {
 		Isotropic { texture }
 	}
 
-	pub fn from_color(color: Vec3) -> Self {
+	pub fn from_color(color: Vector3<f32>) -> Self {
 		Isotropic { texture: Arc::new(SolidColorTexture::new(color) )}
 	}
 }
@@ -196,7 +197,7 @@ impl Material for Isotropic {
 		})
 	}
 
-	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f64 {
+	fn scattering_pdf(&self, ray_in: &Ray, hit_record: &HitRecord, scattered: &Ray) -> f32 {
 		1.0 / (4.0 * PI)
 	}
 }

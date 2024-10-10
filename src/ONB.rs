@@ -1,19 +1,19 @@
-use crate::util::vec3::Vec3;
+use nalgebra::Vector3;
 
 pub struct OrthonormalBasis {
-	pub u: Vec3,
-	pub v: Vec3,
-	pub w: Vec3
+	pub u: Vector3<f32>,
+	pub v: Vector3<f32>,
+	pub w: Vector3<f32>
 }
 
 impl OrthonormalBasis {
-	pub fn new(normal: Vec3) -> Self {
-		let w = normal.unit();
+	pub fn new(normal: Vector3<f32>) -> Self {
+		let w = normal.normalize();
 
 		let a = if w.x.abs() > 0.9 {
-			Vec3::new(0.0, 1.0, 0.0)
+			Vector3::new(0.0, 1.0, 0.0)
 		} else {
-			Vec3::new(1.0, 0.0, 0.0)
+			Vector3::new(1.0, 0.0, 0.0)
 		};
 
 		let v = w.cross(a).unit();
@@ -22,7 +22,7 @@ impl OrthonormalBasis {
 		OrthonormalBasis { u, v, w }
 	}
 
-	pub fn transform(&self, vec: Vec3) -> Vec3 {
+	pub fn transform(&self, vec: Vector3<f32>) -> Vector3<f32> {
 		self.u * vec.x + self.v * vec.y + self.w * vec.z
 	}
 }

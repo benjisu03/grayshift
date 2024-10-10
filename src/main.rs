@@ -30,6 +30,7 @@ use std::f64::consts::PI;
 use std::io::Write;
 use std::mem;
 use std::sync::Arc;
+use nalgebra::Vector3;
 use wgpu::util::DeviceExt;
 use crate::engine::{Engine, RenderSettings, SampleSettings};
 use crate::world::World;
@@ -67,7 +68,7 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 	let materials = materials?;
 
 	let lambertians: Vec<Arc<Lambertian>> = materials.iter().map(|material| {
-		Arc::new(Lambertian::from_color(Vec3::from(material.diffuse.unwrap())))
+		Arc::new(Lambertian::from_color(Vector3::from(material.diffuse.unwrap())))
 	}).collect();
 
 	for model in models {
@@ -171,10 +172,9 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 	)?);
 
 
-
-	let camera_center = Vec3::new(-600.0, 300.0, 800.0);
-	let camera_look_at = Vec3::new(0.0, 100.0, 0.0);
-	let focus_distance = (camera_look_at - camera_center).length();
+	let camera_center = Vector3::new(-600.0, 300.0, 800.0);
+	let camera_look_at = Vector3::new(0.0, 100.0, 0.0);
+	let focus_distance = (camera_look_at - camera_center).magnitude();
 
 	let render_settings = RenderSettings {
 		sample_settings: SampleSettings {
@@ -191,7 +191,7 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 		20.0,
 		camera_center,
 		camera_look_at,
-		Vec3::new(0.0, 1.0, 0.0),
+		Vector3::new(0.0, 1.0, 0.0),
 		0.6,
 		focus_distance
 	);
@@ -210,9 +210,9 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 		lights
 	};
 
-	// engine.render(world)?;
+	engine.render(world)?;
 
-	intersection_test().await?;
+	//intersection_test().await?;
 
 	Ok(())
 }
