@@ -186,7 +186,7 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
         let results: Vec<TriangleIntersection> = bytemuck::cast_slice(&data).to_vec();
 
         drop(data);
-n n         output_buffer.unmap();
+        output_buffer.unmap();
 
         println!("{:?}", results);
     } else {
@@ -208,16 +208,16 @@ struct TriangleIntersection {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
 pub struct RayGPU {
-    pub origin: Vector3<f32>,
-    pub direction: Vector3<f32>,
+    pub origin: [f32; 3],
+    pub direction: [f32; 3],
     pub time: f32
 }
 
 impl From<Ray> for RayGPU {
     fn from(value: Ray) -> Self {
         RayGPU {
-            origin: value.origin,
-            direction: value.direction,
+            origin: [value.origin.x, value.origin.y, value.origin.z],
+            direction: [value.direction.x, value.direction.y, value.direction.z],
             time: value.time
         }
     }

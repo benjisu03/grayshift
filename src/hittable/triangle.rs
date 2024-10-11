@@ -72,17 +72,17 @@ impl Hittable for Triangle {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TriangleGPU {
-    a:  Vector3<f32>,
-    b:  Vector3<f32>,
-    c:  Vector3<f32>
+    a:  [f32; 3],
+    b:  [f32; 3],
+    c:  [f32; 3]
 }
 
 impl From<&Triangle> for TriangleGPU {
     fn from(value: &Triangle) -> Self {
         TriangleGPU {
-            a: value.a,
-            b: value.b,
-            c: value.c
+            a: [value.a.x, value.a.y, value.a.z],
+            b: [value.b.x, value.b.y, value.b.z],
+            c: [value.c.x, value.c.y, value.c.z],
         }
     }
 }

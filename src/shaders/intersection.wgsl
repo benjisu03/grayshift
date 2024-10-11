@@ -95,7 +95,7 @@ fn intersect_BVH(ray: Ray) -> TriangleIntersection {
         let node = bvh[node_id];
 
         if(!intersect_AABB(node.bbox, ray_inv)) {
-        	return TriangleIntersection(node_id, ray.direction.x, ray.direction.y, ray.direction.z);
+        	return TriangleIntersection(node_id, ray.origin.x, ray.origin.y, ray.origin.z);
 		}
 
 		if(node.tri != U32_MAX) {
