@@ -1,4 +1,3 @@
-use crate::util::vec3::Vec3;
 use image::{DynamicImage, GenericImageView, ImageError};
 use nalgebra::Vector3;
 use noise::{NoiseFn, Perlin};
@@ -110,9 +109,9 @@ impl NoiseTexture {
 
 		for i in 0..depth {
 			accum += weight * self.noise.get([
-				sample_point.x,
-				sample_point.y,
-				sample_point.z
+				sample_point.x as f64,
+				sample_point.y as f64,
+				sample_point.z as f64
 			]);
 			weight /= 2.0;
 			sample_point *= 2.0;

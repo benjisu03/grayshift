@@ -1,30 +1,29 @@
-use std::f64::consts::PI;
-use std::rc::Rc;
-use std::sync::Arc;
-use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable};
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
+use crate::AABB::AABB;
+use nalgebra::Vector3;
+use std::f32;
+use std::sync::Arc;
 
 pub struct Sphere {
-	center_start: Vec3,
-	center_path: Vec3,
+	center_start: Vector3<f32>,
+	center_path: Vector3<f32>,
 	is_moving: bool,
-	radius: f64,
+	radius: f32,
 	material: Arc<dyn Material>,
 	bbox: AABB
 }
 
 impl Sphere {
-	pub fn new_stationary(center: Vec3, radius: f64, material: Arc<dyn Material>) -> Self {
-		let r_vec = Vec3::new(radius, radius, radius);
+	pub fn new_stationary(center: Vector3<f32>, radius: f32, material: Arc<dyn Material>) -> Self {
+		let r_vec = Vector3::new(radius, radius, radius);
 		let bbox = AABB::from_corners(center - r_vec, center + r_vec);
 
 		Sphere {
 			center_start: center,
-			center_path: Vec3::ZERO,
+			center_path: Vector3::new(0.0, 0.0, 0.0),
 			is_moving: false,
 			radius,
 			material,
@@ -32,8 +31,8 @@ impl Sphere {
 		}
 	}
 
-	pub fn new_moving(center1: Vec3, center2: Vec3, radius: f64, material: Arc<dyn  Material>) -> Self {
-		let r_vec = Vec3::new(radius, radius, radius);
+	pub fn new_moving(center1: Vector3<f32>, center2: Vector3<f32>, radius: f32, material: Arc<dyn  Material>) -> Self {
+		let r_vec = Vector3::new(radius, radius, radius);
 		let bbox_start = AABB::from_corners(center1 - r_vec, center1 + r_vec);
 		let bbox_end = AABB::from_corners(center2 - r_vec, center2 + r_vec);
 		let bbox_full = AABB::from_AABB_pair(bbox_start, bbox_end);
@@ -48,15 +47,15 @@ impl Sphere {
 		}
 	}
 
-	fn current_center(&self, time: f64) -> Vec3 {
+	fn current_center(&self, time: f32) -> Vector3<f32> {
 		self.center_start + time * self.center_path
 	}
 
-	fn sphere_uv(p: Vec3) -> (f64, f64) {
+	fn sphere_uv(p: Vector3<f32>) -> (f32, f32) {
 		let theta = (-p.y).acos();
-		let phi = (-p.z).atan2(p.x) + PI;
+		let phi = (-p.z).atan2(p.x) + f32::consts::PI;
 
-		(phi / (2.0 * PI), theta / PI)
+		(phi / (2.0 * f32::consts::PI), theta / f32::consts::PI)
 	}
 }
 
@@ -68,16 +67,16 @@ impl Hittable for Sphere {
 			self.center_start
 		};
 		let oc = center - ray.origin;
-		let a = ray.direction.length_squared();
-		let h = ray.direction.dot(oc);
-		let c = oc.length_squared() - self.radius * self.radius;
+		let a = ray.direction.magnitude_squared();
+		let h = ray.direction.dot(&oc);
+		let c = oc.magnitude_squared() - self.radius * self.radius;
 		let discriminant = h * h - a * c;
 
 		if discriminant < 0.0 {
 			return None
 		}
 
-		let sqrt_d = f64::sqrt(discriminant);
+		let sqrt_d = f32::sqrt(discriminant);
 
 		// Find root in ray's range
 		let mut t = (h - sqrt_d) / a;

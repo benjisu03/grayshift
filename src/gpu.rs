@@ -10,8 +10,6 @@ use crate::hittable::sphere::Sphere;
 use crate::material::Lambertian;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
-
 
 
 pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
@@ -48,19 +46,19 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 
     let r1 = Ray::new(
         camera_center,
-        (center1 - camera_center).unit(),
+        (center1 - camera_center).normalize(),
         0.0
     );
 
     let r2 = Ray::new(
         camera_center,
-        (center2 - camera_center).unit(),
+        (center2 - camera_center).normalize(),
         0.0
     );
 
     let r3 = Ray::new(
         camera_center,
-        (center1 - camera_center).unit(),
+        (center1 - camera_center).normalize(),
         0.0
     );
 
@@ -186,39 +184,20 @@ pub struct IntersectionResult {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
 pub struct RayGPU {
-    pub origin: Vec3GPU,
-    pub direction: Vec3GPU,
+    pub origin: Vector3<f32>,
+    pub direction: Vector3<f32>,
     pub time: f32
 }
 
 impl From<Ray> for RayGPU {
     fn from(value: Ray) -> Self {
         RayGPU {
-            origin: Vec3GPU::from(value.origin),
-            direction: Vec3GPU::from(value.direction),
-            time: value.time as f32
+            origin: value.origin,
+            direction: value.direction,
+            time: value.time
         }
     }
 }
-
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
-pub struct Vec3GPU {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32
-}
-
-impl From<Vec3> for Vec3GPU {
-    fn from(v: Vec3) -> Self {
-        Vec3GPU {
-            x: v.x as f32,
-            y: v.y as f32,
-            z: v.z as f32
-        }
-    }
-}
-
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
 pub struct AABBGPU {

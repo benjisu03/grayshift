@@ -1,7 +1,4 @@
-use std::f64::consts::PI;
-use fastrand::f64;
 use nalgebra::Vector3;
-use crate::util::vec3::Vec3;
 
 pub fn random_f32(min: f32, max: f32) -> f32 {
 	fastrand::f32() * (max - min) + min

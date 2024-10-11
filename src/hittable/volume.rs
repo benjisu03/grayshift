@@ -1,26 +1,24 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable};
 use crate::material::{Isotropic, Material};
 use crate::ray::Ray;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
-
+use crate::AABB::AABB;
+use nalgebra::Vector3;
+use std::sync::Arc;
 pub struct ConstantMedium {
 	boundary: Box<dyn Hittable>,
-	density_neg_inv: f64,
+	density_neg_inv: f32,
 	phase_function: Arc<dyn Material>
 }
 
 impl ConstantMedium {
-	pub fn new(boundary: Box<dyn Hittable>, density: f64, phase_function: Arc<dyn Material>) -> Self {
+	pub fn new(boundary: Box<dyn Hittable>, density: f32, phase_function: Arc<dyn Material>) -> Self {
 		let density_neg_inv = -1.0 / density;
 
 		ConstantMedium { boundary, density_neg_inv, phase_function }
 	}
 
-	pub fn from_isotropic_color(boundary: Box<dyn Hittable>, density: f64, color: Vec3) -> Self {
+	pub fn from_isotropic_color(boundary: Box<dyn Hittable>, density: f32, color: Vector3<f32>) -> Self {
 		let density_neg_inv = - 1.0 / density;
 		let phase_function = Arc::new(Isotropic::from_color(color));
 
@@ -33,7 +31,7 @@ impl Hittable for ConstantMedium {
 		let mut hit_record_1 = self.boundary.hit(ray, Interval::UNIVERSE)?;
 		let mut hit_record_2 = self.boundary.hit(
 			ray,
-			Interval::new(hit_record_1.t + 0.0001, f64::MAX)
+			Interval::new(hit_record_1.t + 0.0001, f32::MAX)
 		)?;
 
 		if hit_record_1.t < ray_t.min { hit_record_1.t = ray_t.min; }
@@ -43,9 +41,9 @@ impl Hittable for ConstantMedium {
 
 		if hit_record_1.t < 0.0 { hit_record_1.t = 0.0; }
 
-		let ray_len = ray.direction.length();
+		let ray_len = ray.direction.magnitude();
 		let dist_inside_boundary = (hit_record_2.t - hit_record_1.t) * ray_len;
-		let hit_dist = self.density_neg_inv * f64::ln(fastrand::f64());
+		let hit_dist = self.density_neg_inv * f32::ln(fastrand::f32());
 
 		if hit_dist > dist_inside_boundary { return None; }
 
@@ -55,7 +53,7 @@ impl Hittable for ConstantMedium {
 			ray,
 			t,
 			ray.at(t),
-			Vec3::new(1.0, 0.0, 0.0),
+			Vector3::new(1.0, 0.0, 0.0),
 			self.phase_function.clone(),
 			0.0,
 			0.0

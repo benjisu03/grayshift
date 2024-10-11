@@ -1,6 +1,4 @@
-use std::f64::consts::PI;
 use nalgebra::Vector3;
-use crate::util::vec3::Vec3;
 
 pub struct PDFSample<T> {
     pub sample: T,

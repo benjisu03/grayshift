@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::sync::Arc;
 use indicatif::ProgressBar;
+use nalgebra::Vector3;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use crate::background::Background;
 use crate::camera::Camera;
@@ -9,7 +10,6 @@ use crate::hittable::hittable::Hittable;
 use crate::output::RenderTarget;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
 use crate::world::World;
 
 pub struct Engine {
@@ -19,7 +19,7 @@ pub struct Engine {
     render_settings: RenderSettings,
 
     batch_sqrt: u32,
-    batch_sqrt_recip: f64
+    batch_sqrt_recip: f32
 }
 
 impl Engine {
@@ -30,8 +30,8 @@ impl Engine {
         render_settings: RenderSettings
     ) -> Engine {
 
-        let batch_sqrt = (render_settings.sample_settings.batch_size as f64).sqrt() as u32;
-        let batch_sqrt_recip = 1.0 / (batch_sqrt as f64);
+        let batch_sqrt = (render_settings.sample_settings.batch_size as f32).sqrt() as u32;
+        let batch_sqrt_recip = 1.0 / (batch_sqrt as f32);
 
         Engine {
             camera,
@@ -67,8 +67,8 @@ impl Engine {
         Ok(())
     }
 
-    fn sample(&self, i: u32, j: u32, world: &World, progress: Arc<ProgressBar>) -> Vec3 {
-        let mut pixel_color = Vec3::ZERO;
+    fn sample(&self, i: u32, j: u32, world: &World, progress: Arc<ProgressBar>) -> Vector3<f32> {
+        let mut pixel_color = Vector3::new(0.0, 0.0, 0.0);
 
         let tolerance_sq = self.render_settings.sample_settings.tolerance * self.render_settings.sample_settings.tolerance;
         let confidence_sq = self.render_settings.sample_settings.confidence * self.render_settings.sample_settings.confidence;
@@ -79,12 +79,12 @@ impl Engine {
 
         loop {
             // do a batch of samples
-            sample_count += self.render_settings.sample_settings.batch_size as f64;
+            sample_count += self.render_settings.sample_settings.batch_size as f32;
 
             for s_i in 0..self.batch_sqrt {
                 for s_j in 0..self.batch_sqrt {
                     let offset = self.stratified_square_sample(s_i, s_j);
-                    let ray = self.camera.get_ray(offset, i, j);
+                    let ray = self.camera.get_ray((i, j), offset);
 
                     let sample_color = self.ray_color(ray, self.render_settings.max_ray_depth, world);
                     pixel_color += sample_color;
@@ -122,18 +122,18 @@ impl Engine {
 
     // PRIVATE //
 
-    fn stratified_square_sample(&self, s_i: u32, s_j: u32) -> Vec3 {
-        Vec3::new(
-            ((s_i as f64) + fastrand::f64()) * self.batch_sqrt_recip - 0.5,
-            ((s_j as f64) + fastrand::f64()) * self.batch_sqrt_recip - 0.5,
+    fn stratified_square_sample(&self, s_i: u32, s_j: u32) -> Vector3<f32> {
+        Vector3::new(
+            ((s_i as f32) + fastrand::f32()) * self.batch_sqrt_recip - 0.5,
+            ((s_j as f32) + fastrand::f32()) * self.batch_sqrt_recip - 0.5,
             0.0
         )
     }
 
-    fn ray_color(&self, ray: Ray, depth: u32, world: &World) -> Vec3 {
-        if depth <= 0 { return Vec3::ZERO }
+    fn ray_color(&self, ray: Ray, depth: u32, world: &World) -> Vector3<f32> {
+        if depth <= 0 { return Vector3::new(0.0, 0.0, 0.0) }
 
-        if let Some(hit_record) = world.objects.hit(ray, Interval::new(0.001, f64::MAX)) {
+        if let Some(hit_record) = world.objects.hit(ray, Interval::new(0.001, f32::MAX)) {
             let emission_color = hit_record.material.emitted(
                 hit_record.u,
                 hit_record.v,
@@ -149,9 +149,9 @@ impl Engine {
                     world
                 );
 
-                let cos_theta = hit_record.normal.dot(scatter_record.scattered_ray.direction);
+                let cos_theta = hit_record.normal.dot(&scatter_record.scattered_ray.direction);
 
-                let color_from_scatter = scatter_color * scatter_record.attenuation * cos_theta / scatter_record.pdf;
+                let color_from_scatter = scatter_color.component_mul(&scatter_record.attenuation) * cos_theta / scatter_record.pdf;
 
                 return emission_color + color_from_scatter;
             }
@@ -169,8 +169,8 @@ pub struct RenderSettings {
 }
 
 pub struct SampleSettings {
-    pub confidence: f64, // z-value
-    pub tolerance: f64,
+    pub confidence: f32, // z-value
+    pub tolerance: f32,
     pub batch_size: u32,
     pub max_samples: u32
 }

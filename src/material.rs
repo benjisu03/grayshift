@@ -1,14 +1,12 @@
-use std::f32::consts::PI;
-use std::rc::Rc;
-use std::sync::Arc;
-use nalgebra::Vector3;
 use crate::hittable::hittable::HitRecord;
-use crate::ONB::OrthonormalBasis;
-use crate::pdf::{CosineWeightedPDF, PDFSample, PDF};
+use crate::pdf::{CosineWeightedPDF, PDF};
 use crate::ray::Ray;
 use crate::texture::{SolidColorTexture, Texture};
-use crate::util::util::{random_cosine_direction, random_unit_vector, random_vector_on_hemisphere, reflect, refract};
-use crate::util::vec3::Vec3;
+use crate::ONB::OrthonormalBasis;
+use nalgebra::Vector3;
+use std::f32::consts::PI;
+use std::sync::Arc;
+use crate::util::util::{random_unit_vector, reflect, refract};
 
 pub trait Material: Send + Sync {
 	fn scatter(
@@ -165,7 +163,7 @@ impl DiffuseLight {
 }
 
 impl Material for DiffuseLight {
-	fn emitted(&self, u: f32, v: f32, p: Vec3) -> Vec3 {
+	fn emitted(&self, u: f32, v: f32, p: Vector3<f32>) -> Vector3<f32> {
 		self.texture.value_at(u, v, p)
 	}
 }

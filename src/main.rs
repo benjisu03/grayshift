@@ -16,24 +16,22 @@ mod world;
 
 use crate::background::HDRIBackground;
 use crate::camera::Camera;
-use crate::gpu::intersection_test;
+use crate::engine::{Engine, RenderSettings, SampleSettings};
 use crate::hittable::hittable::{Hittable, HittableList};
 use crate::hittable::sphere::Sphere;
 use crate::hittable::BVH::BVH;
 use crate::material::{Lambertian, Material, Metal};
 use crate::output::{PPMImage, RenderTarget};
 use crate::util::mesh::Mesh;
-use crate::util::vec3::Vec3;
+use crate::world::World;
 use log::LevelFilter;
+use nalgebra::Vector3;
 use std::error::Error;
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 use std::io::Write;
 use std::mem;
 use std::sync::Arc;
-use nalgebra::Vector3;
 use wgpu::util::DeviceExt;
-use crate::engine::{Engine, RenderSettings, SampleSettings};
-use crate::world::World;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -56,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Error>> {
 
 	let mut objects = HittableList::new();
-	let metal = Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0));
+	let metal = Arc::new(Metal::new(Vector3::new(0.7, 0.6, 0.5), 0.0));
 
 	let load_options = tobj::LoadOptions {
 		single_index: false,
@@ -168,7 +166,7 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 
 	let background = Box::new(HDRIBackground::new(
 		"airport.hdr",
-		Vec3::new(PI / 2.0, PI, 0.0)
+		Vector3::new(PI / 2.0, PI, 0.0)
 	)?);
 
 
@@ -203,7 +201,7 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 		render_settings
 	);
 
-	let lights = Arc::new(Sphere::new_stationary(Vec3::ZERO, 1.0, metal));
+	let lights = Arc::new(Sphere::new_stationary(Vector3::new(0.0, 0.0, 0.0), 1.0, metal));
 	let objects_bvh = BVH::new(objects)?;
 	let world = World {
 		objects: Box::new(objects_bvh),

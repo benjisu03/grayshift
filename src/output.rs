@@ -2,12 +2,12 @@ use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use nalgebra::Vector3;
 use crate::color::write_color;
-use crate::util::vec3::Vec3;
 
 pub trait RenderTarget: Send + Sync {
     fn init(&mut self) -> Result<(), Box<dyn Error>>;
-    fn write_color(&mut self, color: Vec3) -> Result<(), Box<dyn Error>>;
+    fn write_color(&mut self, color: Vector3<f32>) -> Result<(), Box<dyn Error>>;
     fn size(&self) -> (u32, u32);
 }
 
@@ -33,7 +33,7 @@ impl RenderTarget for PPMImage {
         Ok(())
     }
 
-    fn write_color(&mut self, color: Vec3) -> Result<(), Box<dyn Error>> {
+    fn write_color(&mut self, color: Vector3<f32>) -> Result<(), Box<dyn Error>> {
         write_color(&mut self.file, color)?;
         Ok(())
     }

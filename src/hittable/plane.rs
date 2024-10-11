@@ -1,11 +1,6 @@
-use std::sync::Arc;
-use nalgebra::Vector3;
-use crate::AABB::AABB;
-use crate::hittable::hittable::{HitRecord, Hittable};
-use crate::material::Material;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
+use nalgebra::Vector3;
 
 pub struct Plane {
     pub normal: Vector3<f32>,

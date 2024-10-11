@@ -16,8 +16,8 @@ impl OrthonormalBasis {
 			Vector3::new(1.0, 0.0, 0.0)
 		};
 
-		let v = w.cross(a).unit();
-		let u = w.cross(v);
+		let v = w.cross(&a).normalize();
+		let u = w.cross(&v);
 
 		OrthonormalBasis { u, v, w }
 	}

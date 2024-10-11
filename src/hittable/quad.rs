@@ -1,14 +1,11 @@
-use std::rc::Rc;
-use std::sync::Arc;
-use log::warn;
-use nalgebra::Vector3;
-use crate::AABB::AABB;
 use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
 use crate::hittable::plane::Plane;
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
+use crate::AABB::AABB;
+use nalgebra::Vector3;
+use std::sync::Arc;
 
 pub struct Quad {
 	plane: Plane,

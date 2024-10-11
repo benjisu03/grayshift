@@ -2,7 +2,6 @@ use std::ops::{Add, Index};
 use nalgebra::Vector3;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
 
 #[derive(Debug, Clone, Copy)]
 pub struct AABB {

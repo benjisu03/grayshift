@@ -1,11 +1,11 @@
 use std::fs::File;
 use std::io::Write;
+use nalgebra::Vector3;
 use crate::util::interval::Interval;
-use crate::util::vec3::Vec3;
 
 const INTENSITY: Interval = Interval { min: 0.000, max: 0.999 };
 
-pub fn write_color(image: &mut File, color: Vec3) -> std::io::Result<()> {
+pub fn write_color(image: &mut File, color: Vector3<f32>) -> std::io::Result<()> {
 	let r = linear_to_gamma(color.x);
 	let g = linear_to_gamma(color.y);
 	let b = linear_to_gamma(color.z);
@@ -18,9 +18,9 @@ pub fn write_color(image: &mut File, color: Vec3) -> std::io::Result<()> {
 	Ok(())
 }
 
-fn linear_to_gamma(n: f64) -> f64 {
+fn linear_to_gamma(n: f32) -> f32 {
 	if n > 0.0 {
-		return f64::sqrt(n);
+		return n.sqrt();
 	}
 
 	0.0
@@ -29,6 +29,6 @@ fn linear_to_gamma(n: f64) -> f64 {
 
 // Converts RGB into human-perceived luminance
 // Formula source: https://www.w3.org/TR/AERT/#color-contrast
-pub fn luminance(v: Vec3) -> f64 {
+pub fn luminance(v: Vector3<f32>) -> f32 {
 	0.299 * v.x + 0.587 * v.y + 0.144 * v.z
 }
