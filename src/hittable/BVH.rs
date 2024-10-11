@@ -3,14 +3,16 @@ use crate::ray::Ray;
 use crate::util::interval::Interval;
 use crate::AABB::AABB;
 use std::error::Error;
+use nalgebra::Vector3;
 use crate::gpu::AABBGPU;
+use crate::hittable::triangle::{Triangle, TriangleGPU};
 
 pub struct BVH {
 	root: Box<BVHNode>,
 }
 
 enum BVHNode {
-	Leaf(Box<dyn Hittable>),
+	Leaf(Box<Triangle>),
 	Branch {
 		left: Box<BVHNode>,
 		right: Option<Box<BVHNode>>,
@@ -21,45 +23,45 @@ enum BVHNode {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
  pub struct BVHNodeGPU {
+	bbox: AABBGPU,
 	left: u32,
 	right: u32,
-	bbox: AABBGPU
+	triangle_id: u32
 }
 
 impl BVH {
-	pub fn new(list: HittableList) -> Result<Self, Box<dyn Error>> {
-		let mut objects = list.take_objects();
-		if objects.is_empty() {
+	pub fn new(list: Vec<Box<Triangle>>) -> Result<Self, Box<dyn Error>> {
+		if list.is_empty() {
 			return Err(Box::from("BVH cannot be built from empty list"));
 		}
 
-		let root = BVH::build(objects);
+		let root = BVH::build(list);
 		Ok(BVH { root })
 	}
 
-	fn build(mut objects: Vec<Box<dyn Hittable>>) -> Box<BVHNode> {
+	fn build(mut triangles: Vec<Box<Triangle>>) -> Box<BVHNode> {
 
-		if objects.len() == 1 {
-			let obj = objects.swap_remove(0);
+		if triangles.len() == 1 {
+			let obj = triangles.swap_remove(0);
 			return Box::new(BVHNode::Leaf(obj));
 		}
 
 		let mut bbox = AABB::EMPTY;
-		for object in objects.iter() {
+		for object in triangles.iter() {
 			bbox = AABB::from_AABB_pair(bbox, object.bounding_box());
 		}
 
 		let axis = bbox.longest_axis();
 
-		objects.sort_by(|a, b| {
+		triangles.sort_by(|a, b| {
 			let a_min = a.bounding_box()[axis].min;
 			let b_min = b.bounding_box()[axis].min;
 			a_min.partial_cmp(&b_min).unwrap()
 		});
 
-		let middle = objects.len() / 2;
-		let right_objs = objects.split_off(middle);
-		let left_objs = objects;
+		let middle = triangles.len() / 2;
+		let right_objs = triangles.split_off(middle);
+		let left_objs = triangles;
 
 		let left = BVH::build(left_objs);
 		let right = Some(BVH::build(right_objs));
@@ -67,38 +69,45 @@ impl BVH {
 		Box::new(BVHNode::Branch { left, right, bbox })
 	}
 
-	pub fn to_gpu(&self) -> Vec<BVHNodeGPU> {
+	pub fn to_gpu(&self) -> (Vec<BVHNodeGPU>, Vec<TriangleGPU>) {
 		let mut flattened = Vec::new();
-		BVH::flatten(self.root.as_ref(), &mut flattened);
-		flattened
+		let mut triangles = Vec::new();
+
+		BVH::flatten(self.root.as_ref(), &mut flattened, &mut triangles);
+		(flattened, triangles)
 	}
 
-	fn flatten(node: &BVHNode, flattened: &mut Vec<BVHNodeGPU>) -> u32 {
+	fn flatten(node: &BVHNode, flattened: &mut Vec<BVHNodeGPU>, triangles: &mut Vec<TriangleGPU>) -> u32 {
 		match node {
-			BVHNode::Leaf(hittable) => {
+			BVHNode::Leaf(triangle) => {
+				let triangle_index = triangles.len() as u32;
+				triangles.push(TriangleGPU::from(triangle.as_ref()));
+
 				let node_index = flattened.len() as u32;
 				flattened.push(BVHNodeGPU {
+					bbox: AABBGPU::from(triangle.bounding_box()),
 					left: u32::MAX,
 					right: u32::MAX,
-					bbox: AABBGPU::from(hittable.bounding_box())
+					triangle_id: triangle_index
 				});
 
 				node_index
 			},
 			BVHNode::Branch { left, right, bbox } => {
-				let left_index = BVH::flatten(left, flattened);
+				let left_index = BVH::flatten(left, flattened, triangles);
 
 				let right_index = if let Some(right_node) = right {
-					BVH::flatten(right_node, flattened)
+					BVH::flatten(right_node, flattened, triangles)
 				} else {
 					u32::MAX
 				};
 
 				let node_index = flattened.len() as u32;
 				flattened.push(BVHNodeGPU {
+					bbox: AABBGPU::from(*bbox),
 					left: left_index,
 					right: right_index,
-					bbox: AABBGPU::from(*bbox)
+					triangle_id: u32::MAX
 				});
 
 				node_index

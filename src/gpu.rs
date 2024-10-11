@@ -1,15 +1,15 @@
-use std::error::Error;
-use std::sync::Arc;
-use nalgebra::Vector3;
-use wgpu::{BindGroupDescriptor, BindGroupEntry, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePipelineDescriptor, MapMode};
-use wgpu::util::{BufferInitDescriptor, DeviceExt};
-use crate::AABB::AABB;
+use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
+use crate::hittable::triangle::Triangle;
 use crate::hittable::BVH::BVH;
-use crate::hittable::hittable::HittableList;
-use crate::hittable::sphere::Sphere;
 use crate::material::Lambertian;
 use crate::ray::Ray;
 use crate::util::interval::Interval;
+use crate::AABB::AABB;
+use nalgebra::Vector3;
+use std::error::Error;
+use std::sync::Arc;
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
+use wgpu::{BindGroupDescriptor, BindGroupEntry, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePipelineDescriptor, MapMode};
 
 
 pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
@@ -17,30 +17,36 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
     let material = Arc::new(Lambertian::from_color(Vector3::new(0.5, 0.5, 0.5)));
 
     let center1 = Vector3::new(0.0, 0.0, 0.0);
-    let s1 = Box::new(Sphere::new_stationary(
-        center1,
-        1.0,
+    let t1 = Box::new(Triangle::new(
+        center1 + Vector3::new(-1.0, -1.0, 0.0),
+        center1 + Vector3::new(0.0, 1.0, 0.0),
+        center1 + Vector3::new(1.0, -1.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
         material.clone()
     ));
 
     let center2 = Vector3::new(3.0, 0.0, 0.0);
-    let s2 = Box::new(Sphere::new_stationary(
-        center2,
-        1.0,
+    let t2 = Box::new(Triangle::new(
+        center2 + Vector3::new(-1.0, -1.0, 0.0),
+        center2 + Vector3::new(0.0, 1.0, 0.0),
+        center2 + Vector3::new(1.0, -1.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
         material.clone()
     ));
 
     let center3 = Vector3::new(5.0, 0.0, 0.0);
-    let s3 = Box::new(Sphere::new_stationary(
-        center3,
-        1.0,
+    let t3 = Box::new(Triangle::new(
+        center3 + Vector3::new(-1.0, -1.0, 0.0),
+        center3 + Vector3::new(0.0, 1.0, 0.0),
+        center3 + Vector3::new(1.0, -1.0, 0.0),
+        Vector3::new(0.0, 0.0, 1.0),
         material.clone()
     ));
 
-    let mut objects = HittableList::new();
-    objects.add(s1);
-    objects.add(s2);
-    objects.add(s3);
+    let mut objects = Vec::new();
+    objects.push(t1);
+    objects.push(t2);
+    objects.push(t3);
 
     let camera_center = Vector3::new(0.0, 0.0, 10.0);
 
@@ -65,7 +71,11 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 
 
     let bvh = BVH::new(objects)?;
-    let bvh_gpu = bvh.to_gpu();
+
+    let interval = Interval::new(0.0, f32::INFINITY);
+    let results_test: Vec<Option<HitRecord>> = [r1, r2, r3].iter().map(|r| bvh.hit(*r, interval)).collect();
+
+    let (bvh_gpu, triangles_gpu) = bvh.to_gpu();
 
     let rays = vec![r1, r2, r3];
     let rays_gpu: Vec<RayGPU> = rays.iter().map(|r| RayGPU::from(*r)).collect();
@@ -82,6 +92,12 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
         usage: BufferUsages::STORAGE | BufferUsages::COPY_DST
     });
 
+    let triangle_buffer = device.create_buffer_init(&BufferInitDescriptor {
+        label: Some("Triangle Buffer"),
+        contents: bytemuck::cast_slice(&triangles_gpu),
+        usage: BufferUsages::STORAGE | BufferUsages::COPY_DST
+    });
+
     let ray_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: Some("Ray Buffer"),
         contents: bytemuck::cast_slice(&rays_gpu),
@@ -90,7 +106,7 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 
     let result_buffer = device.create_buffer(&BufferDescriptor {
         label: Some("Result Buffer"),
-        size: 3 * size_of::<IntersectionResult>() as BufferAddress,
+        size: 3 * size_of::<TriangleIntersection>() as BufferAddress,
         usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
         mapped_at_creation: false,
     });
@@ -108,10 +124,16 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
     let bvh_bind_group = device.create_bind_group(&BindGroupDescriptor {
         label: Some("BVH Bind Group"),
         layout: &bvh_bind_group_layout,
-        entries: &[BindGroupEntry {
-            binding: 0,
-            resource: bvh_buffer.as_entire_binding(),
-        }]
+        entries: &[
+            BindGroupEntry {
+                binding: 0,
+                resource: bvh_buffer.as_entire_binding(),
+            },
+            BindGroupEntry {
+                binding: 1,
+                resource: triangle_buffer.as_entire_binding(),
+            }
+        ]
     });
 
     let ray_bind_group_layout = compute_pipeline.get_bind_group_layout(1);
@@ -144,12 +166,12 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 
     let output_buffer = device.create_buffer(&BufferDescriptor {
         label: Some("Output Buffer"),
-        size: 3 * size_of::<IntersectionResult>() as BufferAddress,
+        size: 3 * size_of::<TriangleIntersection>() as BufferAddress,
         usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
         mapped_at_creation: false
     });
 
-    encoder.copy_buffer_to_buffer(&result_buffer, 0, &output_buffer, 0, 3 * size_of::<IntersectionResult>() as BufferAddress);
+    encoder.copy_buffer_to_buffer(&result_buffer, 0, &output_buffer, 0, 3 * size_of::<TriangleIntersection>() as BufferAddress);
 
     queue.submit(Some(encoder.finish()));
 
@@ -161,10 +183,10 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 
     if let Ok(Ok(..)) = receiver.recv_async().await {
         let data = buffer_slice.get_mapped_range();
-        let results: Vec<IntersectionResult> = bytemuck::cast_slice(&data).to_vec();
+        let results: Vec<TriangleIntersection> = bytemuck::cast_slice(&data).to_vec();
 
         drop(data);
-        output_buffer.unmap();
+n n         output_buffer.unmap();
 
         println!("{:?}", results);
     } else {
@@ -176,9 +198,11 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
-pub struct IntersectionResult {
-    node_id: u32,
-    time: f32
+struct TriangleIntersection {
+    id: u32,
+    t: f32,
+    u: f32,
+    v: f32
 }
 
 #[repr(C)]
@@ -226,8 +250,8 @@ pub struct IntervalGPU {
 impl From<Interval> for IntervalGPU {
     fn from(value: Interval) -> Self {
         IntervalGPU {
-            min: value.min as f32,
-            max: value.max as f32
+            min: value.min,
+            max: value.max
         }
     }
 }

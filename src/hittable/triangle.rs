@@ -67,3 +67,22 @@ impl Hittable for Triangle {
         self.bbox
     }
 }
+
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct TriangleGPU {
+    a:  Vector3<f32>,
+    b:  Vector3<f32>,
+    c:  Vector3<f32>
+}
+
+impl From<&Triangle> for TriangleGPU {
+    fn from(value: &Triangle) -> Self {
+        TriangleGPU {
+            a: value.a,
+            b: value.b,
+            c: value.c
+        }
+    }
+}

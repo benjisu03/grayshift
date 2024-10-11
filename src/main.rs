@@ -32,6 +32,7 @@ use std::io::Write;
 use std::mem;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
+use crate::gpu::intersection_test;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -202,15 +203,15 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 	);
 
 	let lights = Arc::new(Sphere::new_stationary(Vector3::new(0.0, 0.0, 0.0), 1.0, metal));
-	let objects_bvh = BVH::new(objects)?;
-	let world = World {
-		objects: Box::new(objects_bvh),
-		lights
-	};
+	// let objects_bvh = BVH::new(objects)?;
+	// let world = World {
+	// 	objects: Box::new(objects_bvh),
+	// 	lights
+	// };
 
-	engine.render(world)?;
+	//engine.render(world)?;
 
-	//intersection_test().await?;
+	intersection_test().await?;
 
 	Ok(())
 }
