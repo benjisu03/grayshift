@@ -73,7 +73,9 @@ impl Hittable for Triangle {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TriangleGPU {
     a:  Vector3<f32>,
+    _pad1: f32,
     b:  Vector3<f32>,
+    _pad2: f32,
     c:  Vector3<f32>
 }
 
@@ -82,7 +84,9 @@ impl From<&Triangle> for TriangleGPU {
         TriangleGPU {
             a: value.a,
             b: value.b,
-            c: value.c
+            c: value.c,
+            _pad1: 0.0,
+            _pad2: 0.0
         }
     }
 }
