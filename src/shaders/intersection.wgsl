@@ -62,7 +62,6 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 	let ray = rays[index];
 
 	results[index] = intersect_BVH(ray);
-//	results[index] = TriangleIntersection(bvh[index].tri, bvh[0].bbox.max.x, bvh[0].bbox.max.y, bvh[0].bbox.max.z);
 }
 
 // FUNCTIONS //
@@ -78,7 +77,7 @@ fn intersect_BVH(ray: Ray) -> TriangleIntersection {
 	var ray_t_max = F32_MAX;
 
 	// push root node
-	let root_id = arrayLength(bvh) - 1;
+	let root_id = arrayLength(&bvh) - 1;
 	stack[stack_size] = root_id;
 	stack_size++;
 
@@ -91,48 +90,21 @@ fn intersect_BVH(ray: Ray) -> TriangleIntersection {
         let node_id = stack[stack_size];
         let node = bvh[node_id];
 
-
-		let bbox = node.bbox;
-
-		let t1 = (bbox.min - ray.origin) * ray_inv.direction_inverse;
-        let t2 = (bbox.max - ray.origin) * ray_inv.direction_inverse;
-
-        var tmin = min(t1.x, t2.x);
-        var tmax = max(t1.x, t2.x);
-
-        tmin = max(tmin, min(t1.y, t2.y));
-        tmax = min(tmax, max(t1.y, t2.y));
-
-        tmin = max(tmin, min(t1.z, t2.z));
-        tmax = min(tmax, max(t1.z, t2.z));
-
-//        if(true) {
-//        	return TriangleIntersection(node.tri, tmin, tmax, ray_t_max);
-//		}
-
         if(!intersect_AABB(node.bbox, ray_inv, ray_t_max)) {
 			continue;
 		}
-
-//		if(true) {
-//            return TriangleIntersection(node.left, 12.0, 12.0, 12.0);
-//        }
 
 		if(node.tri != U32_MAX) {
 
 			// leaf node
 			let tri_hit = intersect_triangle(ray, node.tri, ray_t_max);
 
-			if(tri_hit.t >= 0.0 && tri_hit.t < result.t) {
+			if(tri_hit.t >= 0.0 && tri_hit.t <= ray_t_max) {
 				result = tri_hit;
 				ray_t_max = tri_hit.t;
 			}
 
 		} else {
-
-//	        if(true) {
-//                return TriangleIntersection(node.left, 69.0, 69.0, 69.0);
-//            }
 
 			// branch node
 			stack[stack_size] = node.left;
@@ -163,13 +135,13 @@ fn intersect_AABB(bbox: AABB, ray: RayInverse, ray_t_max: f32) -> bool {
 	return tmax >= tmin && tmin > 0.0 && tmin < ray_t_max;
 }
 
-const EPSILON: f32 = 0.00001;
+const EPSILON: f32 = 0.000001;
 
 fn intersect_triangle(ray: Ray, triangle_id: u32, ray_max: f32) -> TriangleIntersection {
 	let tri = triangles[triangle_id];
 
-	let edge1 = tri.b - tri.a;
-	let edge2 = tri.c - tri.a;
+	let edge1 = tri.c - tri.a;
+	let edge2 = tri.b - tri.a;
 
 	let h = cross(ray.direction, edge2);
 	let det = dot(edge1, h);
@@ -179,7 +151,7 @@ fn intersect_triangle(ray: Ray, triangle_id: u32, ray_max: f32) -> TriangleInter
 	}
 
 	let inv_det = 1.0 / det;
-	let s = ray.origin - det;
+	let s = ray.origin - tri.a;
 	let u = inv_det * dot(s, h);
 
 	if(u < 0.0 || u > 1.0) {
@@ -195,47 +167,5 @@ fn intersect_triangle(ray: Ray, triangle_id: u32, ray_max: f32) -> TriangleInter
 
 	let t = inv_det * dot(edge2, q);
 
-	if(t > EPSILON && t < ray_max) {
-		return TriangleIntersection(triangle_id, t, u, v);
-	}
-
-	return TriangleIntersection(U32_MAX, 0.0, 0.0, 0.0);
+	return TriangleIntersection(triangle_id, t, u, v);
 }
-
-//fn intersect_BVHNode(node: BVHNode, ray: RayInverse) -> IntersectionResult {
-//	let node_hit = intersect_AABB(node.bbox, ray);
-//	if(!node_hit.did_hit) { return IntersectionResult(false, 0.0); }
-//
-//	var left_hit = false;
-//	if(node.left != U32_MAX) {
-//		let left_node = bvh[node.left];
-//        left_hit = intersect_BVHNode(left_node, ray);
-//	}
-//
-//	var right_hit = false;
-//    if(node.right != U32_MAX) {
-//        let right_node = bvh[node.right];
-//        right_hit = intersect_BVHNode(right_node, ray);
-//    }
-//
-//	if(left_hit) {
-//		if(right_hit) {
-//			// both hit, find closer one
-//			if(left_hit.time < right_hit.time) {
-//				return left_hit;
-//			} else {
-//				return right_hit;
-//			}
-//		}
-//
-//		// only left hit
-//		return left_hit;
-//
-//	} else if(right_hit) {
-//		// only right hit
-//		return right_hit;
-//	}
-//
-//	// hit node but nothing inside
-//	return IntersectionResult(false, 0.0);
-//}

@@ -24,10 +24,11 @@ enum BVHNode {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
  pub struct BVHNodeGPU {
 	pub bbox: AABBGPU,
-	_pad: f32,
+	_pad1: f32,
 	pub left: u32,
 	pub right: u32,
-	pub triangle_id: u32
+	pub triangle_id: u32,
+	_pad2: f32,
 }
 
 impl BVH {
@@ -90,7 +91,8 @@ impl BVH {
 					left: u32::MAX,
 					right: u32::MAX,
 					triangle_id: triangle_index,
-					_pad: 0.0
+					_pad1: 0.0,
+					_pad2: 0.0
 				});
 
 				node_index
@@ -110,7 +112,8 @@ impl BVH {
 					left: left_index,
 					right: right_index,
 					triangle_id: u32::MAX,
-					_pad: 0.0
+					_pad1: 0.0,
+					_pad2: 0.0
 				});
 
 				node_index

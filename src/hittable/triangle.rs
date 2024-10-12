@@ -8,9 +8,9 @@ use std::sync::Arc;
 
 pub struct Triangle {
     normal: Vector3<f32>,
-    a: Vector3<f32>,
-    b: Vector3<f32>,
-    c: Vector3<f32>,
+    pub a: Vector3<f32>,
+    pub b: Vector3<f32>,
+    pub c: Vector3<f32>,
     material: Arc<dyn Material>,
     bbox: AABB,
 }
@@ -25,7 +25,7 @@ impl Triangle {
         Triangle { normal, a, b, c, material, bbox }
     }
 
-    const EPSILON: f32 = 1e-8;
+    const EPSILON: f32 = 1e-6;
 }
 
 impl Hittable for Triangle {
@@ -76,7 +76,8 @@ pub struct TriangleGPU {
     _pad1: f32,
     b:  Vector3<f32>,
     _pad2: f32,
-    c:  Vector3<f32>
+    c:  Vector3<f32>,
+    _pad3: f32,
 }
 
 impl From<&Triangle> for TriangleGPU {
@@ -86,7 +87,8 @@ impl From<&Triangle> for TriangleGPU {
             b: value.b,
             c: value.c,
             _pad1: 0.0,
-            _pad2: 0.0
+            _pad2: 0.0,
+            _pad3: 0.0,
         }
     }
 }

@@ -1,3 +1,4 @@
+use std::cmp::{max, min};
 use crate::hittable::hittable::{HitRecord, Hittable, HittableList};
 use crate::hittable::triangle::Triangle;
 use crate::hittable::BVH::BVH;
@@ -7,6 +8,7 @@ use crate::util::interval::Interval;
 use crate::AABB::AABB;
 use nalgebra::Vector3;
 use std::error::Error;
+use std::ops::Sub;
 use std::sync::Arc;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::{BindGroupDescriptor, BindGroupEntry, BufferAddress, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePipelineDescriptor, MapMode};
@@ -43,11 +45,6 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 		material.clone()
 	));
 
-	let mut objects = Vec::new();
-	objects.push(t1);
-	objects.push(t2);
-	objects.push(t3);
-
 	let camera_center = Vector3::new(0.0, 0.0, 10.0);
 
 	let r1 = Ray::new(
@@ -68,7 +65,10 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 		0.0
 	);
 
-
+	let mut objects = Vec::new();
+	objects.push(t1);
+	objects.push(t2);
+	objects.push(t3);
 
 	let bvh = BVH::new(objects)?;
 
@@ -78,30 +78,7 @@ pub async fn intersection_test() -> Result<(), Box<dyn Error>> {
 	let (bvh_gpu, triangles_gpu) = bvh.to_gpu();
 
 	let rays = vec![r1, r2, r3];
-	let rays_gpu: Vec<RayGPU> = rays.iter().map(|r| {
-		let rg = RayGPU::from(*r);
-
-		// let bbox = bvh_gpu[0].bbox;
-		//
-		// let t1 = (bbox.min - ray.origin) * ray_inv.direction_inverse;
-		// let t2 = (bbox.max - ray.origin) * ray_inv.direction_inverse;
-		//
-		// var tmin = min(t1.x, t2.x);
-		// var tmax = max(t1.x, t2.x);
-		//
-		// tmin = max(tmin, min(t1.y, t2.y));
-		// tmax = min(tmax, max(t1.y, t2.y));
-		//
-		// tmin = max(tmin, min(t1.z, t2.z));
-		// tmax = min(tmax, max(t1.z, t2.z));
-		//
-		// if(!(tmax >= tmin && tmin >= 0.0 && tmin < ray.time)) {
-		// 	return TriangleIntersection(node_id, tmin, tmax, ray.time);
-		// }
-
-		println!("{:?}", rg);
-		rg
-	}).collect();
+	let rays_gpu: Vec<RayGPU> = rays.iter().map(|r| { RayGPU::from(*r) }).collect();
 
 	let instance = wgpu::Instance::default();
 	let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions::default()).await.unwrap();
@@ -234,7 +211,7 @@ pub struct RayGPU {
 	pub origin: [f32; 3],
 	_pad: f32,
 	pub direction: [f32; 3],
-	pub time: f32
+	pub time: f32,
 }
 
 impl From<Ray> for RayGPU {
