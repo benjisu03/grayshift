@@ -32,14 +32,16 @@ use std::io::Write;
 use std::mem;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
-use crate::gpu::intersection_test;
+use crate::gpu::{intersection_test, RayIntersectionManager};
+use crate::hittable::triangle::Triangle;
+use crate::ray::Ray;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
 
 
 	let mut logger = colog::default_builder();
-	logger.filter_level(LevelFilter::Trace);
+	logger.filter_level(LevelFilter::Error);
 	logger.init();
 
 	let image_width = 600;
@@ -76,94 +78,6 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 		let mesh = Mesh::new(model.mesh, material.clone());
 		mesh.triangles.into_iter().for_each(|triangle| { objects.add(Box::new(triangle))});
 	}
-
-
-	let numbers = (0..10).collect::<Vec<i32>>();
-
-	let instance = wgpu::Instance::default();
-	let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions::default()).await.unwrap();
-	let (device, queue) = adapter.request_device(&wgpu::DeviceDescriptor::default(), None).await.unwrap();
-
-	let shader_module = device.create_shader_module(wgpu::include_wgsl!("../shader.wgsl"));
-
-	let buffer_size = (mem::size_of::<i32>() * numbers.len()) as wgpu::BufferAddress;
-
-	let input_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-		label: Some("Input Buffer"),
-		contents: bytemuck::cast_slice(&numbers),
-		usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC
-	});
-
-	let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-		label: Some("Output Buffer"),
-		size: buffer_size,
-		usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-		mapped_at_creation: false,
-	});
-
-	let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-		label: Some("Compute Pipeline"),
-		layout: None,
-		module: &shader_module,
-		entry_point: "main",
-		compilation_options: Default::default(),
-		cache: None
-	});
-	
-	let bind_group_layout = compute_pipeline.get_bind_group_layout(0);
-	let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-		label: None,
-		layout: &bind_group_layout,
-		entries: &[wgpu::BindGroupEntry {
-			binding: 0,
-			resource: input_buffer.as_entire_binding(),
-		}, wgpu::BindGroupEntry {
-			binding: 1,
-			resource: output_buffer.as_entire_binding(),
-		}]
-	});
-
-	let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-	{
-		let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-			label: None,
-			timestamp_writes: None
-		});
-		cpass.set_pipeline(&compute_pipeline);
-		cpass.set_bind_group(0, &bind_group, &[]);
-		cpass.dispatch_workgroups(numbers.len() as u32, 1, 1);
-	}
-
-	let results_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-		label: Some("Results Buffer"),
-		size: buffer_size,
-		usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-		mapped_at_creation: false
-	});
-
-	encoder.copy_buffer_to_buffer(&output_buffer, 0, &results_buffer, 0, buffer_size);
-
-	queue.submit(Some(encoder.finish()));
-
-	let buffer_slice = results_buffer.slice(..);
-	let (sender,  receiver) = flume::bounded(1);
-	buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-
-	device.poll(wgpu::Maintain::wait()).panic_on_timeout();
-
-	if let Ok(Ok(())) = receiver.recv_async().await {
-		let data = buffer_slice.get_mapped_range();
-		let results: Vec<i32> = bytemuck::cast_slice(&data).to_vec();
-
-		drop(data);
-		results_buffer.unmap();
-
-		println!("{:?} => {:?}", numbers, results);
-
-	} else {
-		panic!("Failed to run compute");
-	}
-
 
 	let background = Box::new(HDRIBackground::new(
 		"airport.hdr",
@@ -211,7 +125,67 @@ async fn meshes(render_target: Box<dyn RenderTarget>) -> Result<(), Box<dyn Erro
 
 	//engine.render(world)?;
 
-	intersection_test().await?;
+	let material = Arc::new(Lambertian::from_color(Vector3::new(0.5, 0.5, 0.5)));
+
+	let center1 = Vector3::new(0.0, 0.0, 0.0);
+	let t1 = Box::new(Triangle::new(
+		center1 + Vector3::new(-1.0, -1.0, 0.0),
+		center1 + Vector3::new(0.0, 1.0, 0.0),
+		center1 + Vector3::new(1.0, -1.0, 0.0),
+		Vector3::new(0.0, 0.0, 1.0),
+		material.clone()
+	));
+
+	let center2 = Vector3::new(3.0, 0.0, 0.0);
+	let t2 = Box::new(Triangle::new(
+		center2 + Vector3::new(-1.0, -1.0, 0.0),
+		center2 + Vector3::new(0.0, 1.0, 0.0),
+		center2 + Vector3::new(1.0, -1.0, 0.0),
+		Vector3::new(0.0, 0.0, 1.0),
+		material.clone()
+	));
+
+	let center3 = Vector3::new(5.0, 0.0, 0.0);
+	let t3 = Box::new(Triangle::new(
+		center3 + Vector3::new(-1.0, -1.0, 0.0),
+		center3 + Vector3::new(0.0, 1.0, 0.0),
+		center3 + Vector3::new(1.0, -1.0, 0.0),
+		Vector3::new(0.0, 0.0, 1.0),
+		material.clone()
+	));
+
+	let camera_center = Vector3::new(0.0, 0.0, 10.0);
+
+	let r1 = Ray::new(
+		camera_center,
+		(center1 - camera_center).normalize(),
+		0.0
+	);
+
+	let r2 = Ray::new(
+		camera_center,
+		(center2 - camera_center).normalize(),
+		0.0
+	);
+
+	let r3 = Ray::new(
+		camera_center,
+		(center3 - camera_center).normalize(),
+		0.0
+	);
+
+	let mut objects = Vec::new();
+	objects.push(t1);
+	objects.push(t2);
+	objects.push(t3);
+
+	let bvh = BVH::new(objects)?;
+
+	let mut ray_manager = RayIntersectionManager::new().await;
+	ray_manager.load_environment(&bvh);
+	ray_manager.load_rays(vec![r1, r2, r3]);
+
+	intersection_test(&ray_manager).await?;
 
 	Ok(())
 }
