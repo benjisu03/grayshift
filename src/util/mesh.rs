@@ -35,9 +35,11 @@ impl Mesh {
             let b = &chunk[1];
             let c = &chunk[2];
 
-            let normal = a.normal.unit();
+            let na = a.normal.unit();
+            let nb = b.normal.unit();
+            let nc = c.normal.unit();
 
-            Triangle::new(a.position, b.position, c.position, normal, material.clone())
+            Triangle::new(a.position, b.position, c.position, na, nb, nc, material.clone())
         }).collect();
 
         Self { triangles }

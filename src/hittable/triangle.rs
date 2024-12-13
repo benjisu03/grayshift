@@ -9,22 +9,29 @@ use crate::util::interval::Interval;
 use crate::util::vec3::Vec3;
 
 pub struct Triangle {
-    normal: Vec3,
     a: Vec3,
     b: Vec3,
     c: Vec3,
+    na: Vec3,
+    nb: Vec3,
+    nc: Vec3,
     material: Arc<dyn Material>,
     bbox: AABB,
 }
 
 impl Triangle {
-    pub fn new(a: Vec3, b: Vec3, c: Vec3, normal: Vec3, material: Arc<dyn Material>) -> Self {
+    pub fn new(a: Vec3, b: Vec3, c: Vec3, na: Vec3, nb: Vec3, nc: Vec3, material: Arc<dyn Material>) -> Self {
 
         let bbox_diag1 = AABB::from_corners(a, b);
         let bbox_diag2 = AABB::from_corners(a, c);
         let bbox = AABB::from_AABB_pair(bbox_diag1, bbox_diag2);
 
-        Triangle { normal, a, b, c, material, bbox }
+        Triangle {
+            a, b, c,
+            na, nb, nc,
+            material,
+            bbox
+        }
     }
 
     const EPSILON: f64 = 1e-8;
@@ -54,11 +61,14 @@ impl Hittable for Triangle {
 
         let pos = ray.at(t);
 
+        let w = 1.0 - u - v;
+        let interpolated_normal = (self.na * w + self.nb * u + self.nc * v).unit();
+
         Some(HitRecord::new(
             ray,
             t,
             pos,
-            self.normal,
+            interpolated_normal,
             self.material.clone(),
             u,
             v

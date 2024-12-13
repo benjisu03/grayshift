@@ -942,6 +942,9 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 		empty_material
 	));
 
+		let HDRI_file = File::open("metro.hdr")?;
+		let HDRI_image = radiant::load(BufReader::new(HDRI_file))?;
+
 	let camera_center = Vec3::new(-600.0, 300.0, 800.0);
 	let camera_look_at = Vec3::new(0.0, 100.0, 0.0);
 	let focus_distance = (camera_look_at - camera_center).length();
@@ -953,16 +956,19 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.05,
 			batch_size: 32,
-			max_samples: 1000
+			max_samples: 2000
 		},
 		2,
 		20.0,
 		camera_center,
 		camera_look_at,
 		Vec3::new(0.0, 1.0, 0.0),
-		0.6,
+		0.0,
 		focus_distance,
-		Background::SOLID(Vec3::ZERO)
+		Background::HDRI(HDRI {
+			image: HDRI_image,
+			rotation: Vec3::new(PI / 2.0, PI, PI / 3.0)
+		})
 	);
 
 	let world_bvh = BVHNode::from_list(world);
