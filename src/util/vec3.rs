@@ -42,6 +42,14 @@ impl Vec3 {
 		}
 	}
 
+	pub fn abs(&self) -> Vec3 {
+		Vec3 {
+			x: self.x.abs(),
+			y: self.y.abs(),
+			z: self.z.abs()
+		}
+	}
+
 	const EPSILON: f64 = 1e-8;
 
 	pub fn is_near_zero(&self) -> bool {

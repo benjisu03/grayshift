@@ -13,6 +13,7 @@ use crate::util::util::{deg_to_rad, random_vector_in_unit_disk, rotate_vector};
 use crate::util::vec3::Vec3;
 
 use rayon::prelude::*;
+use crate::background::Background;
 use crate::pdf::{CosineWeightedPDF, HittablePDF, MixturePDF, PDF};
 
 pub struct Camera {
@@ -258,11 +259,10 @@ impl Camera {
 	fn sample_background(&self, ray: &Ray) -> Vec3 {
 		match &self.background {
 			Background::SOLID(color) => { *color }
-			Background::HDRI(HDRI) => { HDRI.sample(ray.direction) }
+			Background::HDRI(HDRI) => { HDRI.sample(ray.direction) },
+			Background::CUBEMAP(CUBEMAP) => { CUBEMAP.sample(ray.direction) },
 		}
 	}
-
-
 
 }
 
@@ -271,31 +271,4 @@ pub struct SampleSettings {
 	pub tolerance: f64,
 	pub batch_size: u32,
 	pub max_samples: u32
-}
-
-pub enum Background {
-	SOLID(Vec3),
-	HDRI(HDRI)
-}
-
-pub struct HDRI {
-	pub image: radiant::Image,
-	pub rotation: Vec3
-}
-
-impl HDRI {
-	pub fn sample(&self, direction: Vec3) -> Vec3 {
-		let rotated = rotate_vector(direction, self.rotation).unit();
-		let theta = rotated.y.atan2(rotated.x);
-		let phi = rotated.z.asin();
-
-		let u = 0.5 + theta / (2.0 * PI);
-		let v = 0.5 - phi / PI;
-
-		let x = ((u * (self.image.width as f64)) as usize) % self.image.width;
-		let y = ((v * (self.image.height as f64)) as usize) % self.image.height;
-
-		let color = self.image.pixel(x, y);
-		Vec3::new(color.r as f64, color.g as f64, color.b as f64)
-	}
 }
