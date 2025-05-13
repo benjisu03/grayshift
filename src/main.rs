@@ -7,6 +7,7 @@ mod material;
 mod AABB;
 mod texture;
 mod ONB;
+mod world_view;
 
 use std::error::Error;
 use std::f64::consts::PI;
@@ -27,6 +28,7 @@ use crate::hittable::quad::Quad;
 use crate::hittable::triangle::Triangle;
 use crate::texture::{CheckeredTexture, ImageTexture, NoiseTexture, SolidColorTexture};
 use crate::hittable::volume::ConstantMedium;
+use crate::world_view::world_view_main;
 
 fn main() -> Result<(), Box<dyn Error>> {
 
@@ -38,9 +40,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut image_file = File::create("image.ppm")?;
 
 
-	const SCENE: u8 = 12;
+	const SCENE: u8 = 13;
 
 	match SCENE {
+		13 => Ok(world_view_main()),
 		12 => meshes(&mut image_file),
 		11 => hdri(&mut image_file),
 		// 10 => triangles(&mut image_file),
@@ -924,7 +927,7 @@ fn meshes(image_file: &mut File) -> Result<(), Box<dyn Error>> {
 			confidence: 0.95, // 95% confidence => 1.96
 			tolerance: 0.05,
 			batch_size: 32,
-			max_samples: 100
+			max_samples: 10000
 		},
 		2,
 		20.0,
